@@ -34,20 +34,16 @@
 *
 * Author: Gonçalo Cabrita on 07/10/2010
 *********************************************************************/
-#define NODE_VERSION 2.01
 
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
-#include <nav_msgs/Odometry.h>			// odom
-#include <geometry_msgs/Twist.h>		// cmd_vel
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Twist.h>
 
-#include "roomba_500_series/OpenInterface.h"
-
-#include <string>
+#include "OpenInterface.h"
 
 std::string port;
-irobot::OpenInterface * roomba;
-
+iRobot::OpenInterface * roomba;
 
 std::string prefixTopic(std::string prefix, char * name)
 {
@@ -65,25 +61,30 @@ void cmdVelReceived(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "roomba560_light_node");
+    ros::init(argc, argv, "roomba_node");
 
-	ROS_INFO("Roomba for ROS %.2f", NODE_VERSION);
+    ROS_INFO("Roomba for ROS");
 	
 	double last_x, last_y, last_yaw;
 	double vel_x, vel_y, vel_yaw;
 	double dt;
 
 	ros::NodeHandle n;
+    ros::NodeHandle pn("~");
 	
-	n.param<std::string>("roomba/port", port, "/dev/ttyUSB0");
+    pn.param<std::string>("port", port, "/dev/ttyUSB0");
 	
-	roomba = new irobot::OpenInterface(port.c_str());
+    roomba = new iRobot::OpenInterface();
+
 	
 	ros::Publisher odom_pub = n.advertise<nav_msgs::Odometry>("/odom", 50);
 	tf::TransformBroadcaster odom_broadcaster;
 	ros::Subscriber cmd_vel_sub  = n.subscribe<geometry_msgs::Twist>("/cmd_vel", 1, cmdVelReceived);
 
-	if( roomba->openSerialPort(true) == 0) ROS_INFO("Connected to Roomba.");
+    if(roomba->openSerialPort(&port))
+    {
+        ROS_INFO("Connected to Roomba.");
+    }
 	else
 	{
 		ROS_FATAL("Could not connect to Roomba.");
@@ -93,27 +94,10 @@ int main(int argc, char** argv)
 	ros::Time current_time, last_time;
 	current_time = ros::Time::now();
 	last_time = ros::Time::now();
-
-	//int heartvalue = 0;
-	//bool inc = true;
 	
 	ros::Rate r(10.0);
 	while(n.ok())
 	{
-		/*if(inc==true) heartvalue += 20;
-		else heartvalue -= 20;
-		if(heartvalue>=255)
-		{
-			heartvalue = 255;
-			inc=false;
-		}
-		if(heartvalue<=0)
-		{
-			heartvalue = 0;
-			inc=true;
-		}
-		roomba->setLeds(0, 0, 0, 0, (unsigned char)heartvalue, 255);*/
-
 		current_time = ros::Time::now();
 		
 		last_x = roomba->odometry_x_;

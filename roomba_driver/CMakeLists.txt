@@ -8,7 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   cereal_port
   geometry_msgs
   nav_msgs
-  roommba_msgs
+  roomba_msgs
   roscpp
   tf
 )
@@ -97,6 +97,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
+  src
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -106,7 +107,7 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-# add_executable(roomba_driver_node src/roomba_driver_node.cpp)
+add_executable(roomba_node src/roomba500_light.cpp src/OpenInterface.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
