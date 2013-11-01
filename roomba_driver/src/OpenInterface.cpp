@@ -35,17 +35,9 @@
 * Author: Gonçalo Cabrita on 19/05/2010
 *********************************************************************/
 
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <stdio.h>
-#include <string>
-#include <netinet/in.h>
-#include <sys/types.h>
-
 #include "OpenInterface.h"
 #include <angles/angles.h>
-
+#include <algorithm>
 
 // *****************************************************************************
 // Constructor
@@ -81,7 +73,7 @@ iRobot::OpenInterface::OpenInterface()
     packet_size_[OI_PACKET_CHARGE_SOURCES] = 1;
     packet_size_[OI_PACKET_OI_MODE] = 1;
     packet_size_[OI_PACKET_SONG_NUMBER] = 1;
-    packet_size_[OI_PACKET_SONG_PLAYING] = 1;,
+    packet_size_[OI_PACKET_SONG_PLAYING] = 1;
     packet_size_[OI_PACKET_STREAM_PACKETS] = 1;
     packet_size_[OI_PACKET_REQ_VELOCITY] = 2;
     packet_size_[OI_PACKET_REQ_RADIUS] = 2;
@@ -215,10 +207,10 @@ bool iRobot::OpenInterface::drive(double linear_speed, double angular_speed)
 bool iRobot::OpenInterface::driveDirect(int left_speed, int right_speed)
 {
 	// Limit velocity
-	int16_t left_speed_mm_s = MAX(left_speed, -ROOMBA_MAX_LIN_VEL_MM_S);
-	left_speed_mm_s = MIN(left_speed, ROOMBA_MAX_LIN_VEL_MM_S);
-	int16_t right_speed_mm_s = MAX(right_speed, -ROOMBA_MAX_LIN_VEL_MM_S);
-	right_speed_mm_s = MIN(right_speed, ROOMBA_MAX_LIN_VEL_MM_S);
+    int16_t left_speed_mm_s = std::max(left_speed, -ROOMBA_MAX_LIN_VEL_MM_S);
+    left_speed_mm_s = std::min(left_speed, ROOMBA_MAX_LIN_VEL_MM_S);
+    int16_t right_speed_mm_s = std::max(right_speed, -ROOMBA_MAX_LIN_VEL_MM_S);
+    right_speed_mm_s = std::min(right_speed, ROOMBA_MAX_LIN_VEL_MM_S);
 	
 	// Compose comand
 	char cmd_buffer[5];
@@ -239,15 +231,15 @@ bool iRobot::OpenInterface::driveDirect(int left_speed, int right_speed)
 // Set the brushes motors status
 bool iRobot::OpenInterface::setBrushes(unsigned char main_brush, unsigned char main_brush_pwm, unsigned char main_brush_direction, unsigned char side_brush, unsigned char side_brush_pwm, unsigned char side_brush_clockwise, unsigned char vacuum, unsigned char vacuum_pwm)
 {
-	unsigned char cmd_buffer[2];
+    char cmd_buffer[4];
+
 	cmd_buffer[0] = OI_OPCODE_MOTORS;
     cmd_buffer[1] = side_brush | vacuum<<1 | main_brush<<2 | side_brush_clockwise<<3 | main_brush_direction<<4;
 	
 	try{ serial_port_->write((char*)cmd_buffer, 2); }
     catch(cereal::Exception& e){ return false; }
 
-    char cmd_buffer[4];
-    cmd_buffer[0] = (char)OI_OPCODE_PWM_MOTORS;
+    cmd_buffer[0] = OI_OPCODE_PWM_MOTORS;
     cmd_buffer[1] = main_brush_pwm;
     cmd_buffer[2] = side_brush_pwm;
     cmd_buffer[3] = vacuum_pwm;
@@ -374,9 +366,9 @@ bool iRobot::OpenInterface::setSensorPackets(OIPacketID * packets, unsigned int 
 
     std::set<iRobot::OIPacketID>::iterator packet_it;
 
-    for(packet_it = request_packets_->begin() ; packet_it < request_packets_->end() ; packet_it++)
+    for(packet_it = request_packets_.begin() ; packet_it != request_packets_.end() ; packet_it++)
     {
-        if((*packets_it >= OI_PACKET_GROUP_0 && OI_PACKET_GROUP_6 <= *packets_it) || (*packets_it >= OI_PACKET_GROUP_100 && OI_PACKET_GROUP_107 <= *packets_it))
+        if((*packet_it >= OI_PACKET_GROUP_0 && OI_PACKET_GROUP_6 <= *packet_it) || (*packet_it >= OI_PACKET_GROUP_100 && OI_PACKET_GROUP_107 <= *packet_it))
         {
             unsigned int packet_id;
             switch(*packet_it)
@@ -419,12 +411,12 @@ bool iRobot::OpenInterface::setSensorPackets(OIPacketID * packets, unsigned int 
         }
         else
         {
-            reply_packets_.insert(*packets_it);
+            reply_packets_.insert(*packet_it);
         }
     }
 
     reply_packets_size_ = 0;
-    for(packet_it = reply_packets_->begin() ; packet_it < reply_packets_->end() ; packet_it++)
+    for(packet_it = reply_packets_.begin() ; packet_it != reply_packets_.end() ; packet_it++)
     {
        reply_packets_size_+= packet_size_[*packet_it];
     }
@@ -438,18 +430,19 @@ bool iRobot::OpenInterface::setSensorPackets(OIPacketID * packets, unsigned int 
 bool iRobot::OpenInterface::getSensorPackets(int timeout)
 {
     char cmd_buffer[request_packets_.size()+2];
-    char data_buffer[packets_size_];
+    char data_buffer[reply_packets_size_];
 
 	// Fill in the command buffer to send to the robot
 	cmd_buffer[0] = (char)OI_OPCODE_QUERY;			// Query
-    cmd_buffer[1] = packets_.size();				// Number of packets
+    cmd_buffer[1] = request_packets_.size();        // Number of packets
+    unsigned int i;
     std::set<iRobot::OIPacketID>::iterator packet_it;
-    for(packet_it = request_packets_.begin() ; packet_it < request_packets_.end() ; packet_it++)
+    for(packet_it = request_packets_.begin(), i = 0 ; packet_it != request_packets_.end() ; packet_it++, i++)
     {
         cmd_buffer[i+2] = *packet_it;               // The packet IDs
 	}
 
-	try{ serial_port_->write(cmd_buffer, num_of_packets_+2); }
+    try{ serial_port_->write(cmd_buffer, request_packets_.size()+2); }
     catch(cereal::Exception& e){ return false; }
 	
     try{ serial_port_->readBytes(data_buffer, reply_packets_size_, timeout); }
@@ -464,17 +457,17 @@ bool iRobot::OpenInterface::getSensorPackets(int timeout)
 bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
 {	
     unsigned int index = 0;
-    std::vector<iRobot::OIPacketID>::iterator packet_it;
-    for(packet_it = reply_packets_.begin() ; packet_it < reply_packets_.end() ; packet_it++)
+    std::set<iRobot::OIPacketID>::iterator packet_it;
+    for(packet_it = reply_packets_.begin() ; packet_it != reply_packets_.end() ; packet_it++)
     {
         if(index == reply_packets_size_) return false;
         switch(*packet_it)
         {
             case OI_PACKET_BUMPS_DROPS:
-                bumper_[RIGHT] = buffer[index] & 0x01;
-                bumper_[LEFT] = (buffer[index] >> 1) & 0x01;
-                wheel_drop_[RIGHT] = (buffer[index] >> 2) & 0x01;
-                wheel_drop_[LEFT] = (buffer[index] >> 3) & 0x01;
+                bumper_flag_[ROOMBA_TWO_RIGHT] = checkAndSet(bumper_[ROOMBA_TWO_RIGHT], bool(buffer[index] & 0x01));
+                bumper_flag_[ROOMBA_TWO_LEFT] = checkAndSet(bumper_[ROOMBA_TWO_LEFT], bool((buffer[index] >> 1) & 0x01));
+                wheel_drop_flag_[ROOMBA_TWO_RIGHT] = checkAndSet(wheel_drop_[ROOMBA_TWO_RIGHT], bool((buffer[index] >> 2) & 0x01));
+                wheel_drop_flag_[ROOMBA_TWO_LEFT] = checkAndSet(wheel_drop_[ROOMBA_TWO_LEFT], bool((buffer[index] >> 3) & 0x01));
                 index++;
                 break;
 
@@ -487,7 +480,7 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
             case OI_PACKET_CLIFF_FRONT_LEFT:
             case OI_PACKET_CLIFF_FRONT_RIGHT:
             case OI_PACKET_CLIFF_RIGHT:
-                cliff_[unsigned int(*packet_it-OI_PACKET_CLIFF_LEFT)] = buffer[index] & 0x01;
+            cliff_flag_[*packet_it-OI_PACKET_CLIFF_LEFT] = checkAndSet(cliff_[*packet_it-OI_PACKET_CLIFF_LEFT], bool(buffer[index] & 0x01));
                 index++;
                 break;
 
@@ -497,10 +490,10 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
                 break;
 
             case OI_PACKET_WHEEL_OVERCURRENTS:
-                overcurrent_[SIDE_BRUSH] = buffer[index] & 0x01;
-                overcurrent_[MAIN_BRUSH] = (buffer[index] >> 2) & 0x01;
-                overcurrent_[RIGHT] = (buffer[index] >> 3) & 0x01;
-                overcurrent_[LEFT] = (buffer[index] >> 4) & 0x01;
+                overcurrent_[ROOMBA_SIDE_BRUSH] = buffer[index] & 0x01;
+                overcurrent_[ROOMBA_MAIN_BRUSH] = (buffer[index] >> 2) & 0x01;
+                overcurrent_[ROOMBA_RIGHT_MOTOR] = (buffer[index] >> 3) & 0x01;
+                overcurrent_[ROOMBA_LEFT_MOTOR] = (buffer[index] >> 4) & 0x01;
                 index++;
                 break;
 
@@ -510,23 +503,23 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
                 break;
 
             case OI_PACKET_IR_CHAR_OMNI:
-                ir_char_[OMNI] = buffer[index];
+                ir_char_[ROOMBA_OMNI] = buffer[index];
                 index++;
                 break;
 
             case OI_PACKET_BUTTONS:
-                for(unsigned int i=0 ; i<8 ; i++) buttons_[i] = (buffer[index] >> i) & 0x01;
+            for(unsigned int i=0 ; i<8 ; i++) button_flag_[i] = checkAndSet(button_[i], bool((buffer[index] >> i) & 0x01));
                 index++;
                 break;
 
             case OI_PACKET_DISTANCE:
-                if(index+1 == packets_size_) return false;
+                if(index+1 == reply_packets_size_) return false;
                 distance_ = buffer2signed_int(buffer, index);
                 index+=2;
                 break;
 
             case OI_PACKET_ANGLE:
-                if(index+1 == packets_size_) return false;
+                if(index+1 == reply_packets_size_) return false;
                 angle_ = buffer2signed_int(buffer, index);
                 index+=2;
                 break;
@@ -538,13 +531,13 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
                 break;
 
             case OI_PACKET_VOLTAGE:
-                if(index+1 == packets_size_) return false;
+                if(index+1 == reply_packets_size_) return false;
                 voltage_ = buffer2unsigned_int(buffer, index)/1000.0;
                 index+=2;
                 break;
 
             case OI_PACKET_CURRENT:
-                if(index+1 == packets_size_) return false;
+                if(index+1 == reply_packets_size_) return false;
                 current_ = buffer2signed_int(buffer, index)/1000.0;
                 index+=2;
                 break;
@@ -555,19 +548,19 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
                 break;
 
             case OI_PACKET_BATTERY_CHARGE:
-                if(index+1 == packets_size_) return false;
+                if(index+1 == reply_packets_size_) return false;
                 charge_ = buffer2unsigned_int(buffer, index)/1000.0;
                 index+=2;
                 break;
 
             case OI_PACKET_BATTERY_CAPACITY:
-                if(index+1 == packets_size_) return false;
+                if(index+1 == reply_packets_size_) return false;
                 capacity_ = buffer2unsigned_int(buffer, index)/1000.0;
                 index+=2;
                 break;
 
             case OI_PACKET_WALL_SIGNAL:
-                if(index+1 == packets_size_) return false;
+                if(index+1 == reply_packets_size_) return false;
                 wall_signal_ = buffer2unsigned_int(buffer, index);
                 index+=2;
                 break;
@@ -576,8 +569,8 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
             case OI_PACKET_CLIFF_FRONT_LEFT_SIGNAL:
             case OI_PACKET_CLIFF_FRONT_RIGHT_SIGNAL:
             case OI_PACKET_CLIFF_RIGHT_SIGNAL:
-                if(index+1 == packets_size_) return false;
-                cliff_signal_[unsigned int(*packet_it-OI_PACKET_CLIFF_LEFT_SIGNAL)] = buffer2unsigned_int(buffer, index);
+                if(index+1 == reply_packets_size_) return false;
+                cliff_signal_[*packet_it-OI_PACKET_CLIFF_LEFT_SIGNAL] = buffer2unsigned_int(buffer, index);
                 index+=2;
                 break;
 
@@ -614,36 +607,36 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
 
             case OI_PACKET_RIGHT_ENCODER:
             case OI_PACKET_LEFT_ENCODER:
-                if(index+1 == packets_size_) return false;
-                last_encoder_counts_[unsigned int(*packets_it-OI_PACKET_RIGHT_ENCODER)] = encoder_counts_[unsigned int(*packets_it-OI_PACKET_RIGHT_ENCODER)];
-                encoder_counts_[unsigned int(*packets_it-OI_PACKET_RIGHT_ENCODER)] = buffer2unsigned_int(buffer, index);
+                if(index+1 == reply_packets_size_) return false;
+                last_encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER] = encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER];
+                encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER] = buffer2unsigned_int(buffer, index);
                 index+=2;
                 break;
 
             case OI_PACKET_LIGHT_BUMPER:
-                ir_bumper_[LEFT] = buffer[index] & 0x01;
-                ir_bumper_[FRONT_LEFT] = (buffer[index] >> 1) & 0x01;
-                ir_bumper_[CENTER_LEFT] = (buffer[index] >> 2) & 0x01;
-                ir_bumper_[CENTER_RIGHT] = (buffer[index] >> 3) & 0x01;
-                ir_bumper_[FRONT_RIGHT] = (buffer[index] >> 4) & 0x01;
-                ir_bumper_[RIGHT] = (buffer[index] >> 5) & 0x01;
+                ir_bumper_flag_[ROOMBA_SIX_LEFT] = checkAndSet(ir_bumper_[ROOMBA_SIX_LEFT], bool(buffer[index] & 0x01));
+                ir_bumper_flag_[ROOMBA_SIX_FRONT_LEFT] = checkAndSet(ir_bumper_[ROOMBA_SIX_FRONT_LEFT], bool((buffer[index] >> 1) & 0x01));
+                ir_bumper_flag_[ROOMBA_SIX_CENTER_LEFT] = checkAndSet(ir_bumper_[ROOMBA_SIX_CENTER_LEFT], bool((buffer[index] >> 2) & 0x01));
+                ir_bumper_flag_[ROOMBA_SIX_CENTER_LEFT] = checkAndSet(ir_bumper_[ROOMBA_SIX_CENTER_RIGHT], bool((buffer[index] >> 3) & 0x01));
+                ir_bumper_flag_[ROOMBA_SIX_CENTER_LEFT] = checkAndSet(ir_bumper_[ROOMBA_SIX_FRONT_RIGHT], bool((buffer[index] >> 4) & 0x01));
+                ir_bumper_flag_[ROOMBA_SIX_CENTER_LEFT] = checkAndSet(ir_bumper_[ROOMBA_SIX_RIGHT], bool((buffer[index] >> 5) & 0x01));
                 index++;
                 break;
 
             case OI_PACKET_LIGHT_BUMPER_LEFT:
             case OI_PACKET_LIGHT_BUMPER_FRONT_LEFT:
-            case OI_PACKET_LIGHT_BUMPER_CENTER_LEFT:,
+            case OI_PACKET_LIGHT_BUMPER_CENTER_LEFT:
             case OI_PACKET_LIGHT_BUMPER_CENTER_RIGHT:
             case OI_PACKET_LIGHT_BUMPER_FRONT_RIGHT:
             case OI_PACKET_LIGHT_BUMPER_RIGHT:
-                if(index+1 == packets_size_) return false;
-                ir_bumper_signal_[unsigned int(*packet_it-OI_PACKET_LIGHT_BUMPER_LEFT)] = buffer2unsigned_int(buffer, index);
+                if(index+1 == reply_packets_size_) return false;
+                ir_bumper_signal_[*packet_it-OI_PACKET_LIGHT_BUMPER_LEFT] = buffer2unsigned_int(buffer, index);
                 index+=2;
                 break;
 
             case OI_PACKET_IR_CHAR_LEFT:
             case OI_PACKET_IR_CHAR_RIGHT:
-                ir_char_[unsigned int(*packet_it-OI_PACKET_IR_CHAR_LEFT)] = buffer[index];
+                ir_char_[*packet_it-OI_PACKET_IR_CHAR_LEFT] = buffer[index];
                 index++;
                 break;
 
@@ -651,8 +644,8 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
             case OI_PACKET_RIGHT_MOTOR_CURRENT:
             case OI_PACKET_BRUSH_MOTOR_CURRENT:
             case OI_PACKET_SIDE_BRUSH_MOTOR_CURRENT:
-                if(index+1 == packets_size_) return false;
-                motor_current_[unsigned int(*packet_it-OI_PACKET_LEFT_MOTOR_CURRENT)] = buffer2signed_int(buffer, index);
+                if(index+1 == reply_packets_size_) return false;
+                motor_current_[*packet_it-OI_PACKET_LEFT_MOTOR_CURRENT] = buffer2signed_int(buffer, index);
                 index+=2;
                 break;
 
@@ -670,41 +663,23 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
 }
 
 
-int iRobot::OpenInterface::buffer2signed_int(unsigned char * buffer, int index)
-{
-	int16_t signed_int;
-	
-	memcpy(&signed_int, buffer+index, 2);
-	signed_int = ntohs(signed_int);
-	
-	return (int)signed_int;
-}
-
-
-int iRobot::OpenInterface::buffer2unsigned_int(unsigned char * buffer, int index)
-{
-	uint16_t unsigned_int;
-
-	memcpy(&unsigned_int, buffer+index, 2);
-	unsigned_int = ntohs(unsigned_int);
-	
-	return (int)unsigned_int;
-}
-
-
 // *****************************************************************************
 // Calculate Roomba odometry
 void iRobot::OpenInterface::calculateOdometry()
 {	
+    int left_pulses = encoder_counts_[ROOMBA_LEFT_ENCODER] - last_encoder_counts_[ROOMBA_LEFT_ENCODER];
+    int right_pulses = encoder_counts_[ROOMBA_RIGHT_ENCODER] - last_encoder_counts_[ROOMBA_RIGHT_ENCODER];
 
-
-    double distance = (encoder_counts_[RIGHT]*ROOMBA_PULSES_TO_M + encoder_counts_[LEFT]*ROOMBA_PULSES_TO_M) / 2.0;
-    double angle = (encoder_counts_[RIGHT]*ROOMBA_PULSES_TO_M - encoder_counts_[LEFT]*ROOMBA_PULSES_TO_M) / -ROOMBA_AXLE_LENGTH;
+    double distance = (right_pulses*ROOMBA_PULSES_TO_M + left_pulses*ROOMBA_PULSES_TO_M) / 2.0;
+    double angle = (right_pulses*ROOMBA_PULSES_TO_M - left_pulses*ROOMBA_PULSES_TO_M) / -ROOMBA_AXLE_LENGTH;
 
 	// Update odometry
     odometry_yaw_ = angles::normalize_angle(odometry_yaw_ + angle);
     odometry_x_ = odometry_x_ + distance*cos(odometry_yaw_);
     odometry_y_ = odometry_y_ + distance*sin(odometry_yaw_);
+
+    last_encoder_counts_[ROOMBA_LEFT_ENCODER] = encoder_counts_[ROOMBA_LEFT_ENCODER];
+    last_encoder_counts_[ROOMBA_RIGHT_ENCODER] = encoder_counts_[ROOMBA_RIGHT_ENCODER];
 }
 
 

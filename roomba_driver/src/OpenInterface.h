@@ -36,6 +36,9 @@
 *********************************************************************/
 
 #include "cereal_port/CerealPort.h"
+#include <netinet/in.h>
+#include <set>
+#include <map>
 
 // OI Modes
 #define OI_MODE_OFF                                 0
@@ -65,15 +68,30 @@
 #define VIRTUAL_WALL                                162
 
 // Positions
-#define LEFT                                        0
-#define RIGHT                                       1
-#define FRONT_LEFT                                  2
-#define FRONT_RIGHT                                 3
-#define CENTER_LEFT                                 4
-#define CENTER_RIGHT                                5
-#define OMNI                                        2
-#define MAIN_BRUSH                                  2
-#define SIDE_BRUSH                                  3
+#define ROOMBA_TWO_LEFT                             0
+#define ROOMBA_TWO_RIGHT                            1
+
+#define ROOMBA_FOUR_LEFT                            0
+#define ROOMBA_FOUR_CENTER_LEFT                     1
+#define ROOMBA_FOUR_CENTER_RIGHT                    2
+#define ROOMBA_FOUR_RIGHT                           3
+
+#define ROOMBA_SIX_LEFT                             0
+#define ROOMBA_SIX_FRONT_LEFT                       1
+#define ROOMBA_SIX_CENTER_LEFT                      2
+#define ROOMBA_SIX_CENTER_RIGHT                     3
+#define ROOMBA_SIX_FRONT_RIGHT                      4
+#define ROOMBA_SIX_RIGHT                            5
+
+#define ROOMBA_OMNI                                 2
+
+#define ROOMBA_SIDE_BRUSH                           3
+#define ROOMBA_MAIN_BRUSH                           2
+#define ROOMBA_RIGHT_MOTOR                          1
+#define ROOMBA_LEFT_MOTOR                           0
+
+#define ROOMBA_RIGHT_ENCODER                        0
+#define ROOMBA_LEFT_ENCODER                         1
 
 // Buttons
 #define BUTTON_CLOCK                                7
@@ -93,6 +111,9 @@
 #define ROOMBA_MAX_LIN_VEL_MM_S                     500
 #define ROOMBA_MAX_ANG_VEL_RAD_S                    2
 #define ROOMBA_MAX_RADIUS_MM                        2000
+
+//! Roomba encoder pulses to meter constant
+#define ROOMBA_PULSES_TO_M                          0.000445558279992234
 
 namespace iRobot
 {
@@ -242,7 +263,7 @@ namespace iRobot
         bool closeSerialPort();
 	
 		//! Power down the Roomba.
-		int powerDown();
+        bool powerDown();
 	
 		//! Set sensor packets
 		/*!
@@ -254,6 +275,7 @@ namespace iRobot
         *  \return true if successful, false otherwise
 		*/
         bool setSensorPackets(OIPacketID * packets, unsigned int packets_size);
+        bool setSensorPackets(std::vector<OIPacketID> &packets){return setSensorPackets(packets.data(), packets.size());}
 		//! Read sensor packets
 		/*!
 		*  Requested the defined sensor packets from the Roomba. If you need odometry and you requested encoder data you need to call calculateOdometry() afterwords.
@@ -423,7 +445,7 @@ namespace iRobot
 		int ir_bumper_signal_[6];		//! IR bumper sensors signal. Indexes: LEFT FRONT_LEFT CENTER_LEFT CENTER_RIGHT FRONT_RIGHT RIGHT
 		unsigned char ir_char_[3];		//! IR characters received. Indexes: OMNI LEFT RIGHT
 	
-		bool buttons_[8];				//! Buttons. Indexes: BUTTON_CLOCK BUTTON_SCHEDULE BUTTON_DAY BUTTON_HOUR BUTTON_MINUTE BUTTON_DOCK BUTTON_SPOT BUTTON_CLEAN
+        bool button_[8];				//! Buttons. Indexes: BUTTON_CLOCK BUTTON_SCHEDULE BUTTON_DAY BUTTON_HOUR BUTTON_MINUTE BUTTON_DOCK BUTTON_SPOT BUTTON_CLEAN
 	
 		unsigned char dirt_detect_;		//! Dirt detected
 	
@@ -444,6 +466,14 @@ namespace iRobot
         int distance_;                  //! Amount of distance travelled since last reading. Not being used, poor resolution.
         int angle_;                     //! Amount of angle turned since last reading. Not being used, poor resolution.
 
+        // Flags
+        bool cliff_flag_[4];
+        bool bumper_flag_[2];
+        bool ir_bumper_flag_[6];
+        bool wheel_drop_flag_[2];
+        bool ir_char_flag_[3];
+        bool button_flag_[8];
+
 		private:
 	
 		//! Start OI
@@ -463,7 +493,7 @@ namespace iRobot
 		*
         *  \return true if successful, false otherwise
 		*/
-        bool sendOpcode(OI_Opcode code);
+        bool sendOpcode(OIOpcode code);
 
         //! Parse sensor packets
         /*!
@@ -475,10 +505,35 @@ namespace iRobot
         */
         bool parseSensorPackets(unsigned char * buffer);
 
+        //! Parser helper to set the flags if a sensor state changes.
+        template <typename T>
+        inline bool checkAndSet(T &value, T new_value)
+        {
+            bool result = (value == new_value);
+            value = new_value;
+            return result;
+        }
+
         //! Parser helper function for converting bytes to singed ints.
-        bool buffer2signed_int(unsigned char * buffer, int index);
+        inline int buffer2signed_int(unsigned char * buffer, int index)
+        {
+            int16_t signed_int;
+
+            memcpy(&signed_int, buffer+index, 2);
+            signed_int = ntohs(signed_int);
+
+            return (int)signed_int;
+        }
         //! Parser helper function for converting bytes to unsinged ints.
-        bool buffer2unsigned_int(unsigned char * buffer, int index);
+        inline int buffer2unsigned_int(unsigned char * buffer, int index)
+        {
+            uint16_t unsigned_int;
+
+            memcpy(&unsigned_int, buffer+index, 2);
+            unsigned_int = ntohs(unsigned_int);
+
+            return (int)unsigned_int;
+        }
 
 		//! Cereal port object
 		cereal::CerealPort * serial_port_;

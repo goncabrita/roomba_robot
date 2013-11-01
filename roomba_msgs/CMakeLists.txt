@@ -52,6 +52,7 @@ add_message_files(
    CliffEvent.msg
    InfraRedEvent.msg
    Led.msg
+   Note.msg
    PlaySong.msg
    SaveSong.msg
    SevenSegmentDisplay.msg

@@ -107,16 +107,16 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-add_executable(roomba_node src/roomba500_light.cpp src/OpenInterface.cpp)
+add_executable(roomba500_node src/roomba500_node.cpp src/OpenInterface.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(roomba_driver_node roomba_driver_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(roomba_driver_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(roomba500_node
+   ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##
