@@ -4,14 +4,9 @@
 # Note that, despite wheel_drop field on SensorState messages, state field is
 # not a bitmask, but the new state of a single sensor.
 
-# wheel
-uint8 LEFT  = 0
-uint8 RIGHT = 1
-
 # state
 uint8 RAISED  = 0
 uint8 DROPPED = 1
 
-time stamp
-uint8 wheel
+Header header
 uint8 state

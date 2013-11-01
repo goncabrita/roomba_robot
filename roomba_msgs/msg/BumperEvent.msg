@@ -3,14 +3,9 @@
 # Note that, despite bumper field on SensorState messages, state field is not a
 # bitmask, but the new state of a single sensor.
 
-# bumper
-uint8 LEFT   = 0
-uint8 RIGHT  = 1
-
 # state
 uint8 RELEASED = 0
 uint8 PRESSED  = 1
 
-time stamp
-uint8 bumper
+Header header
 uint8 state
