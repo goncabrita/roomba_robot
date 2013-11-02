@@ -19,11 +19,8 @@ uint8 AM = 14
 uint8 Clock = 15
 uint8 Schedule = 16
 
-# led state
-uint8 OFF = 0
-uint8 ON = 255
-
-time stamp
-uint8 state
-# You can only control the color on the Clean LED
+uint8 button
+bool state
+# You can only control the color and brightness on the Clean LED
 uint8 color
+uint8 brightness

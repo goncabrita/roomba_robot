@@ -55,6 +55,7 @@ add_message_files(
    Note.msg
    PlaySong.msg
    SaveSong.msg
+   SetLeds.msg
    SevenSegmentDisplay.msg
    WheelDropEvent.msg
 )

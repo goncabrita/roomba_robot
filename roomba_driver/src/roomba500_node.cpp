@@ -45,7 +45,7 @@
 #include <roomba_msgs/ButtonEvent.h>
 #include <roomba_msgs/CliffEvent.h>
 #include <roomba_msgs/InfraRedEvent.h>
-#include <roomba_msgs/Led.h>
+#include <roomba_msgs/SetLeds.h>
 #include <roomba_msgs/PlaySong.h>
 #include <roomba_msgs/SaveSong.h>
 #include <roomba_msgs/SevenSegmentDisplay.h>
@@ -69,7 +69,7 @@ public:
 
     void cmdVelReceived(const geometry_msgs::Twist::ConstPtr& msg);
     void brushReceived(const roomba_msgs::Brush::ConstPtr& msg);
-    void ledReceived(const roomba_msgs::Led::ConstPtr& msg);
+    void ledReceived(const roomba_msgs::SetLeds::ConstPtr& msg);
     void playSong(const roomba_msgs::PlaySong::ConstPtr& msg);
     void saveSong(const roomba_msgs::SaveSong::ConstPtr& msg);
     void ssdReceived(const roomba_msgs::SevenSegmentDisplay::ConstPtr& msg);
@@ -108,6 +108,9 @@ private:
     double last_yaw_;
     ros::Time last_update_;
     double last_charge_;
+
+    double ir_sensor_max_range_;
+    double ir_sensor_exp_denominator_;
 };
 
 Roomba::Roomba() : oi_(), n_(), pn_("~")
@@ -122,18 +125,25 @@ Roomba::Roomba() : oi_(), n_(), pn_("~")
     pn_.param<std::string>("base_frame_id", base_frame_id_, "base_link");
     pn_.param<std::string>("odom_frame_id", odom_frame_id_, "odom");
 
+    pn_.param("ir_sensor_max_range", ir_sensor_max_range_, 0.25);
+    pn_.param("ir_sensor_exp_denominator", ir_sensor_exp_denominator_, 200.0);
+
     pn_.param("rate", rate_, 10.0);
 
     std::string port;
     pn_.param<std::string>("port", port, "/dev/ttyUSB0");
     int baudrate;
-    pn_.param("baudrate", baudrate, 57600);
+    pn_.param("baudrate", baudrate, 115200);
 
     if(!oi_.openSerialPort(&port, baudrate))
     {
         ROS_FATAL("Roomba - %s - Failed to open the serial port %s at %d baud!", __FUNCTION__, port.c_str(), baudrate);
         ROS_BREAK();
     }
+
+    unsigned int led = LED_DIRT;
+    bool state = true;
+    oi_.setLeds(&led, &state, 1);
 
     std::vector<iRobot::OIPacketID> packets;
 
@@ -226,7 +236,7 @@ Roomba::Roomba() : oi_(), n_(), pn_("~")
     if(leds)
     {
         led_sub_ = new ros::Subscriber();
-        *led_sub_ = n_.subscribe<roomba_msgs::Led>("/leds", 10, &Roomba::ledReceived, this);
+        *led_sub_ = n_.subscribe<roomba_msgs::SetLeds>("/leds", 10, &Roomba::ledReceived, this);
     }
 
     bool songs;
@@ -250,7 +260,7 @@ Roomba::Roomba() : oi_(), n_(), pn_("~")
 
     if(!oi_.setSensorPackets(packets))
     {
-        ROS_FATAL("Roomba - %s - Failed to etup the sensor packets!", __FUNCTION__);
+        ROS_FATAL("Roomba - %s - Failed to setup the sensor packets!", __FUNCTION__);
         ROS_BREAK();
     }
 }
@@ -314,6 +324,7 @@ void Roomba::update()
     else if(oi_.power_cord_ == 1) bat_msg.state = roomba_msgs::Battery::CORD;
     bat_msg.level = 100.0*(oi_.charge_/oi_.capacity_);
     bat_msg.time_remaining = ros::Duration((bat_msg.level/((last_charge_ - oi_.charge_)/oi_.capacity_)/dt)/60);
+    battery_pub_.publish(bat_msg);
 
     if(bumper_pub_ != NULL)
     {
@@ -405,8 +416,8 @@ void Roomba::update()
             msg.radiation_type = sensor_msgs::Range::INFRARED;
             msg.field_of_view = M_PI/8;
             msg.min_range = 0;
-            msg.max_range = 0.05;
-            msg.range = oi_.ir_bumper_signal_[i];
+            msg.max_range = ir_sensor_max_range_;
+            msg.range = ir_sensor_max_range_*exp((-1*oi_.ir_bumper_signal_[i])/ir_sensor_exp_denominator_);
             range_pub_->publish(msg);
         }
     }
@@ -428,6 +439,8 @@ void Roomba::spin()
         ros::spinOnce();
         r.sleep();
     }
+
+    oi_.powerDown();
 }
 
 void Roomba::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& msg)
@@ -437,27 +450,58 @@ void Roomba::cmdVelReceived(const geometry_msgs::Twist::ConstPtr& msg)
 
 void Roomba::brushReceived(const roomba_msgs::Brush::ConstPtr& msg)
 {
+    unsigned char brush = msg->brush;
+    bool state = msg->state;
+    unsigned char pwm = msg->pwm;
+    unsigned char direction = msg->direction;
 
+    oi_.setBrushes(&brush, &state, &pwm, &direction, 1);
 }
 
-void Roomba::ledReceived(const roomba_msgs::Led::ConstPtr& msg)
+void Roomba::ledReceived(const roomba_msgs::SetLeds::ConstPtr& msg)
 {
+    unsigned int leds[msg->led.size()];
+    bool states[msg->led.size()];
 
+    int clean_color = -1;
+    int clean_brightness = -1;
+    for(unsigned int i=0 ; i<msg->led.size() ; i++)
+    {
+        leds[i] = msg->led[i].button;
+        states[i] = msg->led[i].state;
+
+        if(leds[i] == LED_CLEAN)
+        {
+            clean_color = msg->led[i].color;
+            clean_brightness = msg->led[i].brightness;
+        }
+    }
+
+    oi_.setLeds(leds, states, msg->led.size(), clean_color, clean_brightness);
 }
 
 void Roomba::playSong(const roomba_msgs::PlaySong::ConstPtr& msg)
 {
-
+    oi_.playSong(msg->song);
 }
 
 void Roomba::saveSong(const roomba_msgs::SaveSong::ConstPtr& msg)
 {
+    unsigned char note[msg->notes.size()];
+    unsigned char note_length[msg->notes.size()];
 
+    for(unsigned int i=0 ; i<msg->notes.size() ; i++)
+    {
+        note[i] = msg->notes[i].note;
+        note_length[i] = msg->notes[i].length;
+    }
+
+    oi_.setSong(msg->song, msg->notes.size(), note, note_length);
 }
 
 void Roomba::ssdReceived(const roomba_msgs::SevenSegmentDisplay::ConstPtr& msg)
 {
-
+    oi_.setSevenSegmentDisplay((unsigned char*)(msg->digit.data()));
 }
 
 

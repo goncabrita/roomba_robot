@@ -85,13 +85,17 @@
 
 #define ROOMBA_OMNI                                 2
 
-#define ROOMBA_SIDE_BRUSH                           3
-#define ROOMBA_MAIN_BRUSH                           2
+#define ROOMBA_SIDE_MOTOR                           3
+#define ROOMBA_MAIN_MOTOR                           2
 #define ROOMBA_RIGHT_MOTOR                          1
 #define ROOMBA_LEFT_MOTOR                           0
 
 #define ROOMBA_RIGHT_ENCODER                        0
 #define ROOMBA_LEFT_ENCODER                         1
+
+#define ROOMBA_MAIN_BRUSH                           0
+#define ROOMBA_SIDE_BRUSH                           1
+#define ROOMBA_VACUUM                               2
 
 // Buttons
 #define BUTTON_CLOCK                                7
@@ -102,6 +106,25 @@
 #define BUTTON_DOCK                                 2
 #define BUTTON_SPOT                                 1
 #define BUTTON_CLEAN                                0
+
+// LEDs
+#define LED_WARNING                                 0
+#define LED_DOCK                                    1
+#define LED_SPOT                                    2
+#define LED_DIRT                                    3
+#define LED_CLEAN                                   4
+#define LED_SUNDAY                                  5
+#define LED_MONDAY                                  6
+#define LED_TUESDAY                                 7
+#define LED_WEDNESDAY                               8
+#define LED_THURSDAY                                9
+#define LED_FRIDAY                                  10
+#define LED_SATURDAY                                11
+#define LED_COLON                                   12
+#define LED_PM                                      13
+#define LED_AM                                      14
+#define LED_CLOCK                                   15
+#define LED_SCHEDULE                                16
 
 // Roomba Dimensions
 #define ROOMBA_BUMPER_X_OFFSET                      0.050
@@ -313,29 +336,15 @@ namespace iRobot
 		/*!
 		*  Set the various brushes motors.
 		*
-        *  \param main_brush                Main brush on (1) or off (0).
-        *  \param main_brush_pwm            The main brush pwm.
-        *  \param main_brush_direction 		Main brush direction.
-        *  \param side_brush                Side brush on (1) or off (0).
-        *  \param sude_brush_pwm            The side brush pwm.
-        *  \param side_brush_clockwise      Wether to rotate the side brush clockwise or not.
-        *  \param vacuum                    Vacuum on (1) or off (0).
-        *  \param vacuum_pwm 				The vacuum pwm.
+        *  \param brushes                The identifiers of the brushes to be changed.
+        *  \param states                 The state of each brush in brushes.
+        *  \param pwms                   The pwm for each brush in brushes.
+        *  \param directions             Directions for the brushes (not used for the vacuum)
+        *  \param size                   Size of the arrays.
 		*
         *  \return true if successful, false otherwise
 		*/
-        bool setBrushes(unsigned char main_brush, unsigned char main_brush_pwm, unsigned char main_brush_direction, unsigned char side_brush, unsigned char side_brush_pwm, unsigned char side_brush_clockwise, unsigned char vacuum, unsigned char vacuum_pwm);
-		//! Set brushes motors pwms
-		/*!
-		*  Set the brushes motors pwms. This is very interesting. One could disconnect the motors and plug other actuators that could be controller over pwm on the Roomba.
-		*
-		*  \param main_brush 	Main brush motor pwm.
-		*  \param side_brush  	Side brush motor pwm.
-		*  \param vacuum  		Vacuum motor pwm.
-		*
-        *  \return true if successful, false otherwise
-		*/
-        bool brushesPWM(char main_brush, char side_brush, char vacuum);
+        bool setBrushes(unsigned char * brushes, bool * states, unsigned char * pwms, unsigned char * directions, unsigned int size);
 		
 		//! Set song
 		/*!
@@ -365,50 +374,26 @@ namespace iRobot
 	
 		//! Set leds
 		/*!
-		*  Set the leds state on the Roomba.
+        *  Set the leds on the Roomba.
 		*
-		*  \param check_robot 		Check robot led.
-		*  \param dock		 		Dock led.
-		*  \param spot		 		Spot led.
-		*  \param debris			Debris led.
-		*  \param power_color		Power led color, varies from green (yellow, orange) to red.
-		*  \param power_intensity	Power led intensity.
-		*
-        *  \return true if successful, false otherwise
-		*/
-        bool setLeds(unsigned char check_robot, unsigned char dock, unsigned char spot, unsigned char debris, unsigned char power_color, unsigned char power_intensity);
-        //! Set schedule leds
-		/*!
-		*  Set the leds state on the Roomba.
-		*
-		*  \param sun 		Sunday, 1 on, 0 off.
-		*  \param mon		Monday, 1 on, 0 off.
-		*  \param tue		Tuesday, 1 on, 0 off.
-		*  \param wed		You get the idea...
-		*  \param thu		...
-		*  \param fri		Boooooring!
-		*  \param sat		Saturday, pfew!
-		*  \param colon		Colon on the clock.
-		*  \param pm		PM.
-		*  \param am		AM.
-		*  \param clock		Clock.
-		*  \param schedule	Schedule.
+        *  \param leds              Array that contains the identifiers of the LEDs to be changed.
+        *  \param states            Array containning the new states for the LEDs.
+        *  \param size              The size of leds and states.
+        *  \param clean_color		Clean led color, varies from green (yellow, orange) to red.
+        *  \param clean_brightness	Clean led intensity.
 		*
         *  \return true if successful, false otherwise
 		*/
-        bool setScheduleLeds(unsigned char sun, unsigned char mon, unsigned char tue, unsigned char wed, unsigned char thu, unsigned char fri, unsigned char sat, unsigned char colon, unsigned char pm, unsigned char am, unsigned char clock, unsigned char schedule);
+        bool setLeds(unsigned int * leds, bool * states, unsigned int size, int clean_color=-1, int clean_brightness=-1);
         //! Set the seven segment display
 		/*!
-        *  Set the digit leds on the Roomba, the ones on the seven segment display. Digits are ordered from left to right on the robot, 3, 2, 1, 0.
+        *  Set the digit leds on the Roomba, the ones on the seven segment display. Digits are ordered from left to right on the robot.
 		*
-		*  \param digit3 		Digit 3
-		*  \param digit2		Digit 2
-		*  \param digit1		Digit 1
-		*  \param digit0		Digit 0
+        *  \param digits 		Digits
 		*
         *  \return true if successful, false otherwise
 		*/
-        bool setSevenSegmentDisplay(unsigned char digit3, unsigned char digit2, unsigned char digit1, unsigned char digit0);
+        bool setSevenSegmentDisplay(unsigned char * digits);
 	
         //! Makes the necessary calculations for determining the odometery of the Roomba using the encoder counts
         void calculateOdometry();
@@ -551,6 +536,14 @@ namespace iRobot
         unsigned int encoder_counts_[2];
         //! Last encoder counts reading.
         unsigned int last_encoder_counts_[2];
+
+        unsigned char clean_color_;
+        unsigned char clean_brightness_;
+        bool leds_[17];
+
+        bool brush_[3];
+        bool brush_direction_[2];
+        unsigned char brush_pwm_[3];
 	};
 
 }

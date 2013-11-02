@@ -161,37 +161,37 @@
 	</link>
 
 	<joint name="left_ir_sensor_joint" type="fixed">
-	  	<origin xyz="0.01 -0.15 0.042" rpy="0 0 -1.5" />        
+	  	<origin xyz="0.01 0.15 0.042" rpy="0 0 1.5" />        
 	    	<parent link="base_link"/>
 	    	<child link="left_ir_sensor_link" />
 	</joint>
 
 	<joint name="front_left_ir_sensor_joint" type="fixed">
-	  	<origin xyz="0.09 -0.12 0.042" rpy="0 0 -1.0" />        
+	  	<origin xyz="0.09 0.12 0.042" rpy="0 0 1.0" />        
 	    	<parent link="base_link"/>
 	    	<child link="front_left_ir_sensor_link" />
 	</joint>
 
 	<joint name="center_left_ir_sensor_joint" type="fixed">
-	  	<origin xyz="0.15 -0.04 0.042" rpy="0 0 -0.4" />        
+	  	<origin xyz="0.15 0.04 0.042" rpy="0 0 0.4" />        
 	    	<parent link="base_link"/>
 	    	<child link="center_left_ir_sensor_link" />
 	</joint>
 
 	<joint name="center_right_ir_sensor_joint" type="fixed">
-	  	<origin xyz="0.15 0.04 0.042" rpy="0 0 0.4" />        
+	  	<origin xyz="0.15 -0.04 0.042" rpy="0 0 -0.4" />        
 	    	<parent link="base_link"/>
 	    	<child link="center_right_ir_sensor_link" />
 	</joint>
 
 	<joint name="front_right_ir_sensor_joint" type="fixed">
-	  	<origin xyz="0.09 0.120 0.042" rpy="0 0 1.0" />        
+	  	<origin xyz="0.09 -0.120 0.042" rpy="0 0 -1.0" />        
 	    	<parent link="base_link"/>
 	    	<child link="front_right_ir_sensor_link" />
 	</joint>
 
 	<joint name="right_ir_sensor_joint" type="fixed">
-	  	<origin xyz="0.01 0.15 0.042" rpy="0 0 1.5" />        
+	  	<origin xyz="0.01 -0.15 0.042" rpy="0 0 -1.5" />        
 	    	<parent link="base_link"/>
 	    	<child link="right_ir_sensor_link" />
 	</joint>
@@ -240,7 +240,7 @@
 	      		<geometry>
 	        		<cylinder radius="0.033" length = "0.023"/>
 	      		</geometry>
-			<material name="Gray" />
+			<material name="DarkGray" />
 	    	</visual>
 	
 	    	<collision>
@@ -270,7 +270,7 @@
 	      		<geometry>
 	        		<cylinder radius="0.033" length = "0.023"/>
 	      		</geometry>
-			<material name="Gray" />
+			<material name="DarkGray" />
 	    	</visual>
 	
 	  	<collision>
@@ -301,7 +301,7 @@
 	        		<!-- <mesh filename="package://roomba_description/meshes/casterwheel.dae"/> -->
 				<sphere radius="0.018" />
 	      		</geometry>
-			<material name="Gray" />
+			<material name="DarkGray" />
 	    	</visual>
 	
 	    	<collision>

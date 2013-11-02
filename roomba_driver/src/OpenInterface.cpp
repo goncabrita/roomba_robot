@@ -38,6 +38,7 @@
 #include "OpenInterface.h"
 #include <angles/angles.h>
 #include <algorithm>
+#include <stdio.h>
 
 // *****************************************************************************
 // Constructor
@@ -88,8 +89,8 @@ iRobot::OpenInterface::OpenInterface()
     packet_size_[OI_PACKET_LIGHT_BUMPER_CENTER_RIGHT] = 2;
     packet_size_[OI_PACKET_LIGHT_BUMPER_FRONT_RIGHT] = 2;
     packet_size_[OI_PACKET_LIGHT_BUMPER_RIGHT] = 2;
-    packet_size_[OI_PACKET_IR_CHAR_LEFT] = 2;
-    packet_size_[OI_PACKET_IR_CHAR_RIGHT] = 2;
+    packet_size_[OI_PACKET_IR_CHAR_LEFT] = 1;
+    packet_size_[OI_PACKET_IR_CHAR_RIGHT] = 1;
     packet_size_[OI_PACKET_LEFT_MOTOR_CURRENT] = 2;
     packet_size_[OI_PACKET_RIGHT_MOTOR_CURRENT] = 2;
     packet_size_[OI_PACKET_BRUSH_MOTOR_CURRENT] = 2;
@@ -97,6 +98,18 @@ iRobot::OpenInterface::OpenInterface()
     packet_size_[OI_PACKET_STASIS] = 1;
 
 	OImode_ = OI_MODE_OFF;
+
+    clean_color_ = 0;
+    clean_brightness_ = 0;
+
+    unsigned int i;
+    for(i=0 ; i<17 ; i++) leds_[i] = false;
+    for(i=0 ; i<2 ; i++) brush_direction_[i] = false;
+    for(i=0 ; i<3 ; i++)
+    {
+        brush_[i] = false;
+        brush_pwm_[i] = false;
+    }
 	
 	// Default packets
     OIPacketID packets[2] = {OI_PACKET_RIGHT_ENCODER, OI_PACKET_LEFT_ENCODER};
@@ -229,23 +242,52 @@ bool iRobot::OpenInterface::driveDirect(int left_speed, int right_speed)
 
 // *****************************************************************************
 // Set the brushes motors status
-bool iRobot::OpenInterface::setBrushes(unsigned char main_brush, unsigned char main_brush_pwm, unsigned char main_brush_direction, unsigned char side_brush, unsigned char side_brush_pwm, unsigned char side_brush_clockwise, unsigned char vacuum, unsigned char vacuum_pwm)
+bool iRobot::OpenInterface::setBrushes(unsigned char * brushes, bool * states, unsigned char * pwms, unsigned char * directions, unsigned int size)
 {
     char cmd_buffer[4];
 
-	cmd_buffer[0] = OI_OPCODE_MOTORS;
-    cmd_buffer[1] = side_brush | vacuum<<1 | main_brush<<2 | side_brush_clockwise<<3 | main_brush_direction<<4;
-	
-	try{ serial_port_->write((char*)cmd_buffer, 2); }
-    catch(cereal::Exception& e){ return false; }
+    bool update_state = false;
+    bool update_pwm = false;
 
-    cmd_buffer[0] = OI_OPCODE_PWM_MOTORS;
-    cmd_buffer[1] = main_brush_pwm;
-    cmd_buffer[2] = side_brush_pwm;
-    cmd_buffer[3] = vacuum_pwm;
+    for(unsigned int i=0 ; i<size ; i++)
+    {
+        if(states[brushes[i]] != brush_[brushes[i]])
+        {
+            brush_[brushes[i]] = states[brushes[i]];
+            update_state = true;
+        }
+        if(directions[brushes[i]] != brush_direction_[brushes[i]] && brushes[i]!=ROOMBA_VACUUM)
+        {
+            brush_direction_[brushes[i]] = directions[brushes[i]];
+            update_state = true;
+        }
+        if(pwms[brushes[i]] != brush_pwm_[brushes[i]])
+        {
+            brush_pwm_[brushes[i]] = pwms[brushes[i]];
+            update_pwm = true;
+        }
+    }
 
-    try{ serial_port_->write(cmd_buffer, 4); }
-    catch(cereal::Exception& e){ return false; }
+    if(update_state)
+    {
+        cmd_buffer[0] = OI_OPCODE_MOTORS;
+        cmd_buffer[1] = brush_[ROOMBA_SIDE_BRUSH] | brush_[ROOMBA_VACUUM]<<1 | brush_[ROOMBA_MAIN_BRUSH]<<2 |  brush_direction_[ROOMBA_SIDE_BRUSH]<<3 | brush_direction_[ROOMBA_MAIN_BRUSH]<<4;
+
+        try{ serial_port_->write((char*)cmd_buffer, 2); }
+        catch(cereal::Exception& e){ return false; }
+    }
+
+    if(update_pwm)
+    {
+        cmd_buffer[0] = OI_OPCODE_PWM_MOTORS;
+        cmd_buffer[1] = brush_pwm_[ROOMBA_MAIN_BRUSH];
+        cmd_buffer[2] = brush_pwm_[ROOMBA_SIDE_BRUSH];
+        cmd_buffer[3] = brush_pwm_[ROOMBA_VACUUM];
+
+        try{ serial_port_->write(cmd_buffer, 4); }
+        catch(cereal::Exception& e){ return false; }
+    }
+
     return true;
 }
 
@@ -291,45 +333,56 @@ bool iRobot::OpenInterface::playSong(unsigned char song_number)
 
 // *****************************************************************************
 // Set the LEDs
-bool iRobot::OpenInterface::setLeds(unsigned char check_robot, unsigned char dock, unsigned char spot, unsigned char debris, unsigned char power_color, unsigned char power_intensity)
+bool iRobot::OpenInterface::setLeds(unsigned int * leds, bool * states, unsigned int size, int clean_color, int clean_brightness)
 {
+    if(clean_color >= 0) clean_color_ = clean_color;
+    if(clean_brightness >= 0) clean_brightness_ = clean_brightness;
+
+    bool update_leds = false;
+    bool update_scheduling_leds = false;
+
+    for(unsigned int i=0 ; i<size ; i++)
+    {
+        leds_[leds[i]] = states[i];
+        if(leds[i] == LED_CLEAN && !states[i]) clean_brightness_ = 0;
+        if(leds[i] >= LED_WARNING && leds[i] <= LED_CLEAN) update_leds = true;
+        if(leds[i] >= LED_SUNDAY && leds[i] <= LED_SCHEDULE) update_leds = true;
+    }
+
     unsigned char cmd_buffer[4];
-    cmd_buffer[0] = (unsigned char)OI_OPCODE_LEDS;
-    cmd_buffer[1] = debris | spot<<1 | dock<<2 | check_robot<<3;
-    cmd_buffer[2] = power_color;
-    cmd_buffer[3] = power_intensity;
 
-    try{ serial_port_->write((char*)cmd_buffer, 4); }
-    catch(cereal::Exception& e){ return false; }
-    return true;
-}
+    if(update_leds)
+    {
+        cmd_buffer[0] = (unsigned char)OI_OPCODE_LEDS;
+        cmd_buffer[1] = leds_[LED_DIRT] | leds_[LED_SPOT]<<1 | leds_[LED_DOCK]<<2 | leds_[LED_WARNING]<<3;
+        cmd_buffer[2] = clean_color_;
+        cmd_buffer[3] = clean_brightness_;
 
+        try{ serial_port_->write((char*)cmd_buffer, 4); }
+        catch(cereal::Exception& e){ return false; }
+    }
 
-// *****************************************************************************
-// Set the scheduling LEDs
-bool iRobot::OpenInterface::setScheduleLeds(unsigned char sun, unsigned char mon, unsigned char tue, unsigned char wed, unsigned char thu, unsigned char fri, unsigned char sat, unsigned char colon, unsigned char pm, unsigned char am, unsigned char clock, unsigned char schedule)
-{
-    unsigned char cmd_buffer[3];
-    cmd_buffer[0] = OI_OPCODE_SCHEDULE_LEDS;
-    cmd_buffer[1] = sun | mon<<1 | tue<<2 | wed<<3 | thu<<4 | fri<<5 | sat<<6;
-    cmd_buffer[2] = colon | pm<<1 | am<<2 | clock<<3 | schedule<<4;
+    if(update_scheduling_leds)
+    {
+        cmd_buffer[0] = OI_OPCODE_SCHEDULE_LEDS;
+        cmd_buffer[1] = leds_[LED_SUNDAY] | leds_[LED_MONDAY]<<1 | leds_[LED_TUESDAY]<<2 | leds_[LED_WEDNESDAY]<<3 | leds_[LED_THURSDAY]<<4 | leds_[LED_FRIDAY]<<5 | leds_[LED_SATURDAY]<<6;
+        cmd_buffer[2] = leds_[LED_COLON] | leds_[LED_PM]<<1 | leds_[LED_AM]<<2 | leds_[LED_CLOCK]<<3 | leds_[LED_SCHEDULE]<<4;
 
-    try{ serial_port_->write((char*)cmd_buffer, 3); }
-    catch(cereal::Exception& e){ return false; }
+        try{ serial_port_->write((char*)cmd_buffer, 3); }
+        catch(cereal::Exception& e){ return false; }
+    }
+
     return true;
 }
 
 
 // *****************************************************************************
 // Set the digit LEDs
-bool iRobot::OpenInterface::setSevenSegmentDisplay(unsigned char digit3, unsigned char digit2, unsigned char digit1, unsigned char digit0)
+bool iRobot::OpenInterface::setSevenSegmentDisplay(unsigned char * digits)
 {
     unsigned char cmd_buffer[5];
     cmd_buffer[0] = (unsigned char)OI_OPCODE_DIGIT_LEDS_ASCII;
-    cmd_buffer[1] = digit3;
-    cmd_buffer[2] = digit2;
-    cmd_buffer[3] = digit1;
-    cmd_buffer[4] = digit0;
+    for(unsigned int i=0 ; i<4 ; i++) cmd_buffer[i+1] = digits[i];
 
     try{ serial_port_->write((char*)cmd_buffer, 5); }
     catch(cereal::Exception& e){ return false; }
@@ -368,50 +421,44 @@ bool iRobot::OpenInterface::setSensorPackets(OIPacketID * packets, unsigned int 
 
     for(packet_it = request_packets_.begin() ; packet_it != request_packets_.end() ; packet_it++)
     {
-        if((*packet_it >= OI_PACKET_GROUP_0 && OI_PACKET_GROUP_6 <= *packet_it) || (*packet_it >= OI_PACKET_GROUP_100 && OI_PACKET_GROUP_107 <= *packet_it))
+        unsigned int packet_id;
+        switch(*packet_it)
         {
-            unsigned int packet_id;
-            switch(*packet_it)
-            {
-                case OI_PACKET_GROUP_0:			//! OI packets 7-26
-                    for(packet_id=7 ; packet_id<=26 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_1:			//! OI packets 7-16
-                    for(packet_id=7 ; packet_id<=16 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_2:			//! OI packets 17-20
-                    for(packet_id=17 ; packet_id<=20 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_3:			//! OI packets 21-26
-                    for(packet_id=21 ; packet_id<=26 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_4:			//! OI packets 27-34
-                    for(packet_id=27 ; packet_id<=34 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_5:			//! OI packets 35-42
-                    for(packet_id=35 ; packet_id<=42 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_6:			//! OI packets 7-42
-                    for(packet_id=7 ; packet_id<=42 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_100:		//! OI packets 7-58
-                    for(packet_id=7 ; packet_id<=58 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_101:		//! OI packets 43-58
-                    for(packet_id=43 ; packet_id<=58 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_106:		//! OI packets 46-51
-                    for(packet_id=46 ; packet_id<=51 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-                case OI_PACKET_GROUP_107:		//! OI packets 54-58
-                    for(packet_id=54 ; packet_id<=58 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
-                    break;
-            }
-
-        }
-        else
-        {
-            reply_packets_.insert(*packet_it);
+            case OI_PACKET_GROUP_0:			//! OI packets 7-26
+                for(packet_id=7 ; packet_id<=26 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_1:			//! OI packets 7-16
+                for(packet_id=7 ; packet_id<=16 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_2:			//! OI packets 17-20
+                for(packet_id=17 ; packet_id<=20 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_3:			//! OI packets 21-26
+                for(packet_id=21 ; packet_id<=26 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_4:			//! OI packets 27-34
+                for(packet_id=27 ; packet_id<=34 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_5:			//! OI packets 35-42
+                for(packet_id=35 ; packet_id<=42 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_6:			//! OI packets 7-42
+                for(packet_id=7 ; packet_id<=42 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_100:		//! OI packets 7-58
+                for(packet_id=7 ; packet_id<=58 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_101:		//! OI packets 43-58
+                for(packet_id=43 ; packet_id<=58 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_106:		//! OI packets 46-51
+                for(packet_id=46 ; packet_id<=51 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            case OI_PACKET_GROUP_107:		//! OI packets 54-58
+                for(packet_id=54 ; packet_id<=58 ; packet_id++) reply_packets_.insert(OIPacketID(packet_id));
+                break;
+            default:
+                reply_packets_.insert(*packet_it);
         }
     }
 
@@ -442,11 +489,22 @@ bool iRobot::OpenInterface::getSensorPackets(int timeout)
         cmd_buffer[i+2] = *packet_it;               // The packet IDs
 	}
 
+    /*printf("[DEBUG] Request buffer: 0x%X ", cmd_buffer[0]);
+    for(i=1 ; i<request_packets_.size()+1 ; i++) printf("%d ", cmd_buffer[i]);
+    printf("\n");*/
+
     try{ serial_port_->write(cmd_buffer, request_packets_.size()+2); }
     catch(cereal::Exception& e){ return false; }
+
+    //printf("[DEBUG] Reply buffer size: %d bytes\n", reply_packets_size_);
 	
-    try{ serial_port_->readBytes(data_buffer, reply_packets_size_, timeout); }
+    int bytes;
+    try{bytes = serial_port_->readBytes(data_buffer, reply_packets_size_, timeout); }
     catch(cereal::Exception& e){ return false; }
+
+    /*printf("[DEBUG] Reply buffer: ");
+    for(i=0 ; i<reply_packets_size_ ; i++) printf("0x%X ", data_buffer[i]);
+    printf("\n");*/
 	
     return parseSensorPackets((unsigned char*)data_buffer);
 }
@@ -460,7 +518,6 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
     std::set<iRobot::OIPacketID>::iterator packet_it;
     for(packet_it = reply_packets_.begin() ; packet_it != reply_packets_.end() ; packet_it++)
     {
-        if(index == reply_packets_size_) return false;
         switch(*packet_it)
         {
             case OI_PACKET_BUMPS_DROPS:
@@ -490,8 +547,8 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
                 break;
 
             case OI_PACKET_WHEEL_OVERCURRENTS:
-                overcurrent_[ROOMBA_SIDE_BRUSH] = buffer[index] & 0x01;
-                overcurrent_[ROOMBA_MAIN_BRUSH] = (buffer[index] >> 2) & 0x01;
+                overcurrent_[ROOMBA_SIDE_MOTOR] = buffer[index] & 0x01;
+                overcurrent_[ROOMBA_MAIN_MOTOR] = (buffer[index] >> 2) & 0x01;
                 overcurrent_[ROOMBA_RIGHT_MOTOR] = (buffer[index] >> 3) & 0x01;
                 overcurrent_[ROOMBA_LEFT_MOTOR] = (buffer[index] >> 4) & 0x01;
                 index++;
@@ -513,13 +570,11 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
                 break;
 
             case OI_PACKET_DISTANCE:
-                if(index+1 == reply_packets_size_) return false;
                 distance_ = buffer2signed_int(buffer, index);
                 index+=2;
                 break;
 
             case OI_PACKET_ANGLE:
-                if(index+1 == reply_packets_size_) return false;
                 angle_ = buffer2signed_int(buffer, index);
                 index+=2;
                 break;
@@ -531,13 +586,11 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
                 break;
 
             case OI_PACKET_VOLTAGE:
-                if(index+1 == reply_packets_size_) return false;
                 voltage_ = buffer2unsigned_int(buffer, index)/1000.0;
                 index+=2;
                 break;
 
             case OI_PACKET_CURRENT:
-                if(index+1 == reply_packets_size_) return false;
                 current_ = buffer2signed_int(buffer, index)/1000.0;
                 index+=2;
                 break;
@@ -548,19 +601,16 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
                 break;
 
             case OI_PACKET_BATTERY_CHARGE:
-                if(index+1 == reply_packets_size_) return false;
                 charge_ = buffer2unsigned_int(buffer, index)/1000.0;
                 index+=2;
                 break;
 
             case OI_PACKET_BATTERY_CAPACITY:
-                if(index+1 == reply_packets_size_) return false;
                 capacity_ = buffer2unsigned_int(buffer, index)/1000.0;
                 index+=2;
                 break;
 
             case OI_PACKET_WALL_SIGNAL:
-                if(index+1 == reply_packets_size_) return false;
                 wall_signal_ = buffer2unsigned_int(buffer, index);
                 index+=2;
                 break;
@@ -569,7 +619,6 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
             case OI_PACKET_CLIFF_FRONT_LEFT_SIGNAL:
             case OI_PACKET_CLIFF_FRONT_RIGHT_SIGNAL:
             case OI_PACKET_CLIFF_RIGHT_SIGNAL:
-                if(index+1 == reply_packets_size_) return false;
                 cliff_signal_[*packet_it-OI_PACKET_CLIFF_LEFT_SIGNAL] = buffer2unsigned_int(buffer, index);
                 index+=2;
                 break;
@@ -607,7 +656,6 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
 
             case OI_PACKET_RIGHT_ENCODER:
             case OI_PACKET_LEFT_ENCODER:
-                if(index+1 == reply_packets_size_) return false;
                 last_encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER] = encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER];
                 encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER] = buffer2unsigned_int(buffer, index);
                 index+=2;
@@ -629,7 +677,6 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
             case OI_PACKET_LIGHT_BUMPER_CENTER_RIGHT:
             case OI_PACKET_LIGHT_BUMPER_FRONT_RIGHT:
             case OI_PACKET_LIGHT_BUMPER_RIGHT:
-                if(index+1 == reply_packets_size_) return false;
                 ir_bumper_signal_[*packet_it-OI_PACKET_LIGHT_BUMPER_LEFT] = buffer2unsigned_int(buffer, index);
                 index+=2;
                 break;
@@ -644,7 +691,6 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
             case OI_PACKET_RIGHT_MOTOR_CURRENT:
             case OI_PACKET_BRUSH_MOTOR_CURRENT:
             case OI_PACKET_SIDE_BRUSH_MOTOR_CURRENT:
-                if(index+1 == reply_packets_size_) return false;
                 motor_current_[*packet_it-OI_PACKET_LEFT_MOTOR_CURRENT] = buffer2signed_int(buffer, index);
                 index+=2;
                 break;
@@ -660,6 +706,8 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
         }
     }
     calculateOdometry();
+
+    return true;
 }
 
 
