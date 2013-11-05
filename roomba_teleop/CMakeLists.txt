@@ -7,6 +7,8 @@ project(roomba_teleop)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
+  visualization_msgs
+  interactive_markers
 )
 
 ## System dependencies are found with CMake's conventions
@@ -102,16 +104,18 @@ include_directories(
 # )
 
 ## Declare a cpp executable
-# add_executable(roomba_teleop_node src/roomba_teleop_node.cpp)
+add_executable(interactive_markers_teleop_node src/interactive_markers_teleop.cpp)
+add_executable(joystick_teleop_node src/joystick_teleop.cpp)
+add_executable(keyboard_teleop_node src/keyboard_teleop.cpp)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(roomba_teleop_node roomba_teleop_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(roomba_teleop_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(interactive_markers_teleop_node ${catkin_LIBRARIES})
+target_link_libraries(joystick_teleop_node ${catkin_LIBRARIES})
+target_link_libraries(keyboard_teleop_node ${catkin_LIBRARIES})
 
 #############
 ## Install ##
