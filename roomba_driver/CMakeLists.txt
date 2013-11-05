@@ -8,7 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   cereal_port
   geometry_msgs
   nav_msgs
-  roommba_msgs
+  roomba_msgs
   roscpp
   tf
 )
