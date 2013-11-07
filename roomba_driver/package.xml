@@ -43,13 +43,13 @@
   <build_depend>cereal_port</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
-  <build_depend>roommba_msgs</build_depend>
+  <build_depend>roomba_msgs</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>tf</build_depend>
   <run_depend>cereal_port</run_depend>
   <run_depend>geometry_msgs</run_depend>
   <run_depend>nav_msgs</run_depend>
-  <run_depend>roommba_msgs</run_depend>
+  <run_depend>roomba_msgs</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>tf</run_depend>
 

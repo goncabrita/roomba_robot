@@ -34,146 +34,88 @@
 *
 * Author: Gonçalo Cabrita on 19/05/2010
 *********************************************************************/
-#include "cereal_port/CerealPort.h"
 
-// Packets sizes
-#define OI_PACKET_GROUP_0_SIZE						26
-#define OI_PACKET_GROUP_1_SIZE						10
-#define OI_PACKET_GROUP_2_SIZE						6
-#define OI_PACKET_GROUP_3_SIZE						10
-#define OI_PACKET_GROUP_4_SIZE						14
-#define OI_PACKET_GROUP_5_SIZE						12
-#define OI_PACKET_GROUP_6_SIZE						52
-#define OI_PACKET_GROUP_100_SIZE					80
-#define OI_PACKET_GROUP_101_SIZE					28
-#define OI_PACKET_GROUP_106_SIZE					12
-#define OI_PACKET_GROUP_107_SIZE					9
-#define OI_PACKET_BUMPS_DROPS_SIZE					1
-#define OI_PACKET_WALL_SIZE							1
-#define OI_PACKET_CLIFF_LEFT_SIZE					1
-#define OI_PACKET_CLIFF_FRONT_LEFT_SIZE				1
-#define OI_PACKET_CLIFF_FRONT_RIGHT_SIZE			1
-#define OI_PACKET_CLIFF_RIGHT_SIZE					1
-#define OI_PACKET_VIRTUAL_WALL_SIZE					1
-#define OI_PACKET_WHEEL_OVERCURRENTS_SIZE			1
-#define OI_PACKET_DIRT_DETECT_SIZE					1	
-#define OI_PACKET_IR_CHAR_OMNI_SIZE					1
-#define OI_PACKET_IR_CHAR_LEFT_SIZE					1
-#define OI_PACKET_IR_CHAR_RIGHT_SIZE				1
-#define OI_PACKET_BUTTONS_SIZE						1	
-#define OI_PACKET_DISTANCE_SIZE						2
-#define OI_PACKET_ANGLE_SIZE						2
-#define OI_PACKET_CHARGING_STATE_SIZE				1
-#define OI_PACKET_VOLTAGE_SIZE						2
-#define OI_PACKET_CURRENT_SIZE						2
-#define OI_PACKET_TEMPERATURE_SIZE					1
-#define OI_PACKET_BATTERY_CHARGE_SIZE				2
-#define OI_PACKET_BATTERY_CAPACITY_SIZE				2
-#define OI_PACKET_WALL_SIGNAL_SIZE					2
-#define OI_PACKET_CLIFF_LEFT_SIGNAL_SIZE			2
-#define OI_PACKET_CLIFF_FRONT_LEFT_SIGNAL_SIZE		2
-#define OI_PACKET_CLIFF_FRONT_RIGHT_SIGNAL_SIZE		2
-#define OI_PACKET_CLIFF_RIGHT_SIGNAL_SIZE			2
-#define OI_PACKET_CHARGE_SOURCES_SIZE				1
-#define OI_PACKET_OI_MODE_SIZE						1
-#define OI_PACKET_SONG_NUMBER_SIZE					1
-#define OI_PACKET_SONG_PLAYING_SIZE					1
-#define OI_PACKET_STREAM_PACKETS_SIZE				1
-#define OI_PACKET_REQ_VELOCITY_SIZE					2
-#define OI_PACKET_REQ_RADIUS_SIZE					2
-#define OI_PACKET_REQ_RIGHT_VELOCITY_SIZE			2
-#define OI_PACKET_REQ_LEFT_VELOCITY_SIZE			2
-#define OI_PACKET_RIGHT_ENCODER_SIZE				2
-#define OI_PACKET_LEFT_ENCODER_SIZE					2
-#define OI_PACKET_LIGHT_BUMPER_SIZE					1
-#define OI_PACKET_LIGHT_BUMPER_LEFT_SIZE			2
-#define OI_PACKET_LIGHT_BUMPER_FRONT_LEFT_SIZE		2
-#define OI_PACKET_LIGHT_BUMPER_CENTER_LEFT_SIZE		2
-#define OI_PACKET_LIGHT_BUMPER_CENTER_RIGHT_SIZE	2
-#define OI_PACKET_LIGHT_BUMPER_FRONT_RIGHT_SIZE		2
-#define OI_PACKET_LIGHT_BUMPER_RIGHT_SIZE			2
-#define OI_PACKET_LEFT_MOTOR_CURRENT_SIZE			2	
-#define OI_PACKET_RIGHT_MOTOR_CURRENT_SIZE			2
-#define OI_PACKET_BRUSH_MOTOR_CURRENT_SIZE			2
-#define OI_PACKET_SIDE_BRUSH_MOTOR_CURRENT_SIZE		2
-#define OI_PACKET_STASIS_SIZE						1
+#include "cereal_port/CerealPort.h"
+#include <netinet/in.h>
+#include <set>
+#include <map>
 
 // OI Modes
-#define OI_MODE_OFF				0
-#define OI_MODE_PASSIVE			1
-#define OI_MODE_SAFE			2
-#define OI_MODE_FULL			3
+#define OI_MODE_OFF                                 0
+#define OI_MODE_PASSIVE                             1
+#define OI_MODE_SAFE                                2
+#define OI_MODE_FULL                                3
 
 // Delay after mode change in ms
-#define OI_DELAY_MODECHANGE_MS	20
+#define OI_DELAY_MODECHANGE_MS                      20
 
 // Charging states
-#define OI_CHARGING_NO			0
-#define OI_CHARGING_RECOVERY	1
-#define OI_CHARGING_CHARGING	2
-#define OI_CHARGING_TRICKLE		3
-#define OI_CHARGING_WAITING		4
-#define OI_CHARGING_ERROR		5
+#define OI_CHARGING_NO                              0
+#define OI_CHARGING_RECOVERY                        1
+#define OI_CHARGING_CHARGING                        2
+#define OI_CHARGING_TRICKLE                         3
+#define OI_CHARGING_WAITING                         4
+#define OI_CHARGING_ERROR                           5
 
 // IR Characters
-#define FORCE_FIELD						161
-#define GREEN_BUOY						164
-#define GREEN_BUOY_FORCE_FIELD			165
-#define RED_BUOY						168
-#define RED_BUOY_FORCE_FIELD			169
-#define RED_BUOY_GREEN_BUOY				172
-#define RED_BUOY_GREEN_BUOY_FORCE_FIELD	173
-#define VIRTUAL_WALL					162
+#define FORCE_FIELD                                 161
+#define GREEN_BUOY                                  164
+#define GREEN_BUOY_FORCE_FIELD                      165
+#define RED_BUOY                                    168
+#define RED_BUOY_FORCE_FIELD                        169
+#define RED_BUOY_GREEN_BUOY                         172
+#define RED_BUOY_GREEN_BUOY_FORCE_FIELD             173
+#define VIRTUAL_WALL                                162
 
 // Positions
-#define LEFT				0
-#define RIGHT				1
-#define FRONT_LEFT			2
-#define FRONT_RIGHT			3
-#define CENTER_LEFT			4
-#define CENTER_RIGHT		5
-#define OMNI				2
-#define MAIN_BRUSH			2
-#define SIDE_BRUSH			3
+#define ROOMBA_TWO_LEFT                             0
+#define ROOMBA_TWO_RIGHT                            1
+
+#define ROOMBA_FOUR_LEFT                            0
+#define ROOMBA_FOUR_CENTER_LEFT                     1
+#define ROOMBA_FOUR_CENTER_RIGHT                    2
+#define ROOMBA_FOUR_RIGHT                           3
+
+#define ROOMBA_SIX_LEFT                             0
+#define ROOMBA_SIX_FRONT_LEFT                       1
+#define ROOMBA_SIX_CENTER_LEFT                      2
+#define ROOMBA_SIX_CENTER_RIGHT                     3
+#define ROOMBA_SIX_FRONT_RIGHT                      4
+#define ROOMBA_SIX_RIGHT                            5
+
+#define ROOMBA_OMNI                                 2
+
+#define ROOMBA_SIDE_BRUSH                           3
+#define ROOMBA_MAIN_BRUSH                           2
+#define ROOMBA_RIGHT_MOTOR                          1
+#define ROOMBA_LEFT_MOTOR                           0
+
+#define ROOMBA_RIGHT_ENCODER                        0
+#define ROOMBA_LEFT_ENCODER                         1
 
 // Buttons
-#define BUTTON_CLOCK		7
-#define BUTTON_SCHEDULE		6
-#define BUTTON_DAY			5
-#define BUTTON_HOUR			4
-#define BUTTON_MINUTE		3
-#define BUTTON_DOCK			2
-#define BUTTON_SPOT			1
-#define BUTTON_CLEAN		0
+#define BUTTON_CLOCK                                7
+#define BUTTON_SCHEDULE                             6
+#define BUTTON_DAY                                  5
+#define BUTTON_HOUR                                 4
+#define BUTTON_MINUTE                               3
+#define BUTTON_DOCK                                 2
+#define BUTTON_SPOT                                 1
+#define BUTTON_CLEAN                                0
 
 // Roomba Dimensions
-#define ROOMBA_BUMPER_X_OFFSET		0.050
-#define ROOMBA_DIAMETER				0.330
-#define ROOMBA_AXLE_LENGTH			0.235
+#define ROOMBA_BUMPER_X_OFFSET                      0.050
+#define ROOMBA_DIAMETER                             0.330
+#define ROOMBA_AXLE_LENGTH                          0.235
 
-#define ROOMBA_MAX_LIN_VEL_MM_S		500
-#define ROOMBA_MAX_ANG_VEL_RAD_S	2  
-#define ROOMBA_MAX_RADIUS_MM		2000
+#define ROOMBA_MAX_LIN_VEL_MM_S                     500
+#define ROOMBA_MAX_ANG_VEL_RAD_S                    2
+#define ROOMBA_MAX_RADIUS_MM                        2000
 
-//! Roomba max encoder counts
-#define ROOMBA_MAX_ENCODER_COUNTS	65535
 //! Roomba encoder pulses to meter constant
-#define ROOMBA_PULSES_TO_M			0.000445558279992234
+#define ROOMBA_PULSES_TO_M                          0.000445558279992234
 
-#define MAX_PATH 32
-
-
-#ifndef MIN
-#define MIN(a,b) ((a < b) ? (a) : (b))
-#endif
-#ifndef MAX
-#define MAX(a,b) ((a > b) ? (a) : (b))
-#endif
-#ifndef NORMALIZE
-#define NORMALIZE(z) atan2(sin(z), cos(z))
-#endif
-
-namespace irobot
+namespace iRobot
 {
 	//! OI op codes
 	/*!
@@ -211,7 +153,7 @@ namespace irobot
 		OI_OPCODE_SCHEDULE = 167,
 		OI_OPCODE_SET_DAY_TIME = 168
 
-	} OI_Opcode;
+    } OIOpcode;
 
 
 	//! OI packet id
@@ -241,6 +183,7 @@ namespace irobot
 		OI_PACKET_VIRTUAL_WALL = 13,
 		OI_PACKET_WHEEL_OVERCURRENTS = 14,
 		OI_PACKET_DIRT_DETECT = 15,
+        OI_PACKET_UNUSED_16 = 16,
 		OI_PACKET_IR_CHAR_OMNI = 17,
 		OI_PACKET_BUTTONS = 18,
 		OI_PACKET_DISTANCE = 19,
@@ -256,6 +199,8 @@ namespace irobot
 		OI_PACKET_CLIFF_FRONT_LEFT_SIGNAL = 29,
 		OI_PACKET_CLIFF_FRONT_RIGHT_SIGNAL = 30,
 		OI_PACKET_CLIFF_RIGHT_SIGNAL = 31,
+        OI_PACKET_UNUSED_32 = 32,
+        OI_PACKET_UNUSED_33 = 33,
 		OI_PACKET_CHARGE_SOURCES = 34,
 		OI_PACKET_OI_MODE = 35,
 		OI_PACKET_SONG_NUMBER = 36,
@@ -282,8 +227,7 @@ namespace irobot
 		OI_PACKET_SIDE_BRUSH_MOTOR_CURRENT = 57,
 		OI_PACKET_STASIS = 58
 	
-	} OI_Packet_ID;
-
+    } OIPacketID;
 
 	/*! \class OpenInterface OpenInterface.h "inc/OpenInterface.h"
 	 *  \brief C++ class implementation of the iRobot OI.
@@ -298,57 +242,51 @@ namespace irobot
 		/*!
 		 * By default the constructor will set the Roomba to read only the encoder counts (for odometry).
 		 *
-		 *  \param new_serial_port    Name of the serial port to open.
-		 *
 		 *  \sa setSensorPackets()
 		 */
-		OpenInterface(const char * new_serial_port);
+        OpenInterface();
 		//! Destructor
 		~OpenInterface();
 	
 		//! Open the serial port
 		/*!
-		 *  \param full_control    Whether to set the Roomba on OImode full or not.
+         *  \param serial_port      The name of the serial port where the Roomba is connected.
+         *  \param baud_rate        The baudrate of the serial port. Default value is 115200.
+         *  \param full_control     Whether to set the Roomba on OImode full or not. Defaults to true.
+         *
+         *  \sa closeSerialPort()
+         *
+         *  \return true if successful, false otherwise
 		 */
-		int openSerialPort(bool full_control);
+        bool openSerialPort(std::string * serial_port, int baud_rate=115200, bool full_control=true);
 		//! Close the serial port
-		int closeSerialPort();
+        bool closeSerialPort();
 	
 		//! Power down the Roomba.
-		int powerDown();
+        bool powerDown();
 	
 		//! Set sensor packets
 		/*!
 		*  Set the sensor packets one wishes to read from the roomba. By default the constructor will set the Roomba to read only the encoder counts (for odometry). 
 		*
-		*  \param new_sensor_packets  	Array of sensor packets to read.
-		*  \param new_num_of_packets  	Number of sensor packets in the array.
-		*  \param new_buffer_size		Size of the resulting sensor data reply.
+        *  \param packets       Array of sensor packets to read.
+        *  \param packets_size  Number of sensor packets.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int setSensorPackets(OI_Packet_ID * new_sensor_packets, int new_num_of_packets, size_t new_buffer_size);
+        bool setSensorPackets(OIPacketID * packets, unsigned int packets_size);
+        bool setSensorPackets(std::vector<OIPacketID> &packets){return setSensorPackets(packets.data(), packets.size());}
 		//! Read sensor packets
 		/*!
 		*  Requested the defined sensor packets from the Roomba. If you need odometry and you requested encoder data you need to call calculateOdometry() afterwords.
 		*
 		*  \param timeout		Timeout in milliseconds.
 		*
-		* \sa calculateOdometry()
+        *  \sa calculateOdometry()
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int getSensorPackets(int timeout);
-		
-		//! Stream sensor packets. NOT TESTED
-		int streamSensorPackets();
-		//! Start stream. NOT TESTED
-		int startStream();
-		//! Stom stream. NOT TESTED
-		int stopStream();
-	
-		//! Calculate Roomba odometry. Call after reading encoder pulses.
-		void calculateOdometry();
+        bool getSensorPackets(int timeout);
 	
 		//! Drive
 		/*!
@@ -357,9 +295,9 @@ namespace irobot
 		*  \param linear_speed  	Linear speed.
 		*  \param angular_speed  	Angular speed.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int drive(double linear_speed, double angular_speed);
+        bool drive(double linear_speed, double angular_speed);
 		//! Drive direct
 		/*!
 		*  Send velocity commands to Roomba.
@@ -367,33 +305,26 @@ namespace irobot
 		*  \param left_speed  	Left wheel speed.
 		*  \param right_speed  	Right wheel speed.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int driveDirect(int left_speed, int right_speed);
-		//! Drive PWM
-		/*!
-		*  Set the motors pwms. NOT IMPLEMENTED
-		*
-		*  \param left_pwm  	Left wheel motor pwm.
-		*  \param right_pwm  	Right wheel motor pwm.
-		*
-		*  \return 0 if ok, -1 otherwise.
-		*/
-		int drivePWM(int left_pwm, int right_pwm);
+        bool driveDirect(int left_speed, int right_speed);
 	
 		//! Set brushes
 		/*!
 		*  Set the various brushes motors.
 		*
-		*  \param side_brush  			Side brush on (1) or off (0).
-		*  \param vacuum  				Vacuum on (1) or off (0).
-		*  \param main_brush 			Main brush on (1) or off (0).
-		*  \param side_brush_clockwise 	Wether to rotate the side brush clockwise or not.
-		*  \param main_brush_dir 		Main brush direction.
+        *  \param main_brush                Main brush on (1) or off (0).
+        *  \param main_brush_pwm            The main brush pwm.
+        *  \param main_brush_direction 		Main brush direction.
+        *  \param side_brush                Side brush on (1) or off (0).
+        *  \param sude_brush_pwm            The side brush pwm.
+        *  \param side_brush_clockwise      Wether to rotate the side brush clockwise or not.
+        *  \param vacuum                    Vacuum on (1) or off (0).
+        *  \param vacuum_pwm 				The vacuum pwm.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int brushes(unsigned char side_brush, unsigned char vacuum, unsigned char main_brush, unsigned char side_brush_clockwise, unsigned char main_brush_dir);
+        bool setBrushes(unsigned char main_brush, unsigned char main_brush_pwm, unsigned char main_brush_direction, unsigned char side_brush, unsigned char side_brush_pwm, unsigned char side_brush_clockwise, unsigned char vacuum, unsigned char vacuum_pwm);
 		//! Set brushes motors pwms
 		/*!
 		*  Set the brushes motors pwms. This is very interesting. One could disconnect the motors and plug other actuators that could be controller over pwm on the Roomba.
@@ -402,19 +333,9 @@ namespace irobot
 		*  \param side_brush  	Side brush motor pwm.
 		*  \param vacuum  		Vacuum motor pwm.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int brushesPWM(char main_brush, char side_brush, char vacuum);
-	
-		//! Set the Roomba in cleaning mode. Returns the OImode to safe.
-		int clean();
-		//! Set the Roomba in max cleaning mode. Returns the OImode to safe.
-		int max();
-		//! Set the Roomba in spot cleaning mode. Returns the OImode to safe.
-		int spot();
-		//! Sends the Roomba to the dock. Returns the OImode to safe.
-		int goDock();
-	
+        bool brushesPWM(char main_brush, char side_brush, char vacuum);
 		
 		//! Set song
 		/*!
@@ -427,9 +348,9 @@ namespace irobot
 		*
 		*  \sa playSong()
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int setSong(unsigned char song_number, unsigned char song_length, unsigned char *notes, unsigned char *note_lengths);
+        bool setSong(unsigned char song_number, unsigned char song_length, unsigned char *notes, unsigned char *note_lengths);
 		//! Play song
 		/*!
 		*  Play a song previously recorded on Roombas memory. You can only play songs stored with setSong().
@@ -438,9 +359,9 @@ namespace irobot
 		*
 		*  \sa setSong()
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int playSong(unsigned char song_number);
+        bool playSong(unsigned char song_number);
 	
 		//! Set leds
 		/*!
@@ -453,10 +374,10 @@ namespace irobot
 		*  \param power_color		Power led color, varies from green (yellow, orange) to red.
 		*  \param power_intensity	Power led intensity.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int setLeds(unsigned char check_robot, unsigned char dock, unsigned char spot, unsigned char debris, unsigned char power_color, unsigned char power_intensity);
-		//! Set scheduling leds
+        bool setLeds(unsigned char check_robot, unsigned char dock, unsigned char spot, unsigned char debris, unsigned char power_color, unsigned char power_intensity);
+        //! Set schedule leds
 		/*!
 		*  Set the leds state on the Roomba.
 		*
@@ -473,28 +394,38 @@ namespace irobot
 		*  \param clock		Clock.
 		*  \param schedule	Schedule.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int setSchedulingLeds(unsigned char sun, unsigned char mon, unsigned char tue, unsigned char wed, unsigned char thu, unsigned char fri, unsigned char sat, unsigned char colon, unsigned char pm, unsigned char am, unsigned char clock, unsigned char schedule);
-		//! Set digit leds
+        bool setScheduleLeds(unsigned char sun, unsigned char mon, unsigned char tue, unsigned char wed, unsigned char thu, unsigned char fri, unsigned char sat, unsigned char colon, unsigned char pm, unsigned char am, unsigned char clock, unsigned char schedule);
+        //! Set the seven segment display
 		/*!
-		*  Set the digit leds on the Roomba, the ones on the clock. Digits are ordered from left to right on the robot, 3, 2, 1, 0.
+        *  Set the digit leds on the Roomba, the ones on the seven segment display. Digits are ordered from left to right on the robot, 3, 2, 1, 0.
 		*
 		*  \param digit3 		Digit 3
 		*  \param digit2		Digit 2
 		*  \param digit1		Digit 1
 		*  \param digit0		Digit 0
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int setDigitLeds(unsigned char digit3, unsigned char digit2, unsigned char digit1, unsigned char digit0);
+        bool setSevenSegmentDisplay(unsigned char digit3, unsigned char digit2, unsigned char digit1, unsigned char digit0);
 	
+        //! Makes the necessary calculations for determining the odometery of the Roomba using the encoder counts
+        void calculateOdometry();
+        //! Set the odometry
+        /*!
+        *  Set the odometry to a determined state.
+        *
+        *  \param x     The new value for x
+        *  \param y     The new value for y
+        *  \param yaw   The new value for yaw
+        */
+        void setOdometry(double x, double y, double yaw);
+        //! Reset the odometry
+        void resetOdometry(){setOdometry(0.0, 0.0, 0.0);}
+
 		//! Current operation mode, one of ROOMBA_MODE_'s
 		unsigned char OImode_;
-	
-		//! Sends the Roomba to the dock. Returns the OImode to safe.
-		void resetOdometry();
-		void setOdometry(double new_x, double new_y, double new_yaw);
 	
 		//! Roomba odometry x
 		double odometry_x_;
@@ -514,7 +445,7 @@ namespace irobot
 		int ir_bumper_signal_[6];		//! IR bumper sensors signal. Indexes: LEFT FRONT_LEFT CENTER_LEFT CENTER_RIGHT FRONT_RIGHT RIGHT
 		unsigned char ir_char_[3];		//! IR characters received. Indexes: OMNI LEFT RIGHT
 	
-		bool buttons_[8];				//! Buttons. Indexes: BUTTON_CLOCK BUTTON_SCHEDULE BUTTON_DAY BUTTON_HOUR BUTTON_MINUTE BUTTON_DOCK BUTTON_SPOT BUTTON_CLEAN
+        bool button_[8];				//! Buttons. Indexes: BUTTON_CLOCK BUTTON_SCHEDULE BUTTON_DAY BUTTON_HOUR BUTTON_MINUTE BUTTON_DOCK BUTTON_SPOT BUTTON_CLEAN
 	
 		unsigned char dirt_detect_;		//! Dirt detected
 	
@@ -532,93 +463,18 @@ namespace irobot
 	
 		int stasis_;					//! 1 when the robot is going forward, 0 otherwise
 
+        int distance_;                  //! Amount of distance travelled since last reading. Not being used, poor resolution.
+        int angle_;                     //! Amount of angle turned since last reading. Not being used, poor resolution.
+
+        // Flags
+        bool cliff_flag_[4];
+        bool bumper_flag_[2];
+        bool ir_bumper_flag_[6];
+        bool wheel_drop_flag_[2];
+        bool ir_char_flag_[3];
+        bool button_flag_[8];
+
 		private:
-	
-		//! Parse data
-		/*!
-		*  Data parsing function. Parses data comming from the Roomba.
-		*
-		*  \param buffer  			Data to be parsed.
-		*  \param buffer_length  	Size of the data buffer.
-		*
-		*  \return 0 if ok, -1 otherwise.
-		*/
-		int parseSensorPackets(unsigned char * buffer, size_t buffer_length);
-	
-		int parseBumpersAndWheeldrops(unsigned char * buffer, int index);
-		int parseWall(unsigned char * buffer, int index);
-		int parseLeftCliff(unsigned char * buffer, int index);
-		int parseFrontLeftCliff(unsigned char * buffer, int index);
-		int parseFrontRightCliff(unsigned char * buffer, int index);
-		int parseRightCliff(unsigned char * buffer, int index);	
-		int parseVirtualWall(unsigned char * buffer, int index);
-		int parseOvercurrents(unsigned char * buffer, int index);
-		int parseDirtDetector(unsigned char * buffer, int index);
-		int parseIrOmniChar(unsigned char * buffer, int index);
-		int parseButtons(unsigned char * buffer, int index);
-		int parseDistance(unsigned char * buffer, int index);
-		int parseAngle(unsigned char * buffer, int index);
-		int parseChargingState(unsigned char * buffer, int index);
-		int parseVoltage(unsigned char * buffer, int index);
-		int parseCurrent(unsigned char * buffer, int index);
-		int parseTemperature(unsigned char * buffer, int index);
-		int parseBatteryCharge(unsigned char * buffer, int index);
-		int parseBatteryCapacity(unsigned char * buffer, int index);
-		int parseWallSignal(unsigned char * buffer, int index);
-		int parseLeftCliffSignal(unsigned char * buffer, int index);
-		int parseFrontLeftCliffSignal(unsigned char * buffer, int index);
-		int parseFontRightCliffSignal(unsigned char * buffer, int index);
-		int parseRightCliffSignal(unsigned char * buffer, int index);
-		int parseChargingSource(unsigned char * buffer, int index);
-		int parseOiMode(unsigned char * buffer, int index);
-		int parseSongNumber(unsigned char * buffer, int index);
-		int parseSongPlaying(unsigned char * buffer, int index);
-		int parseNumberOfStreamPackets(unsigned char * buffer, int index);
-		int parseRequestedVelocity(unsigned char * buffer, int index);
-		int parseRequestedRadius(unsigned char * buffer, int index);
-		int parseRequestedRightVelocity(unsigned char * buffer, int index);
-		int parseRequestedLeftVelocity(unsigned char * buffer, int index);
-		int parseRightEncoderCounts(unsigned char * buffer, int index);
-		int parseLeftEncoderCounts(unsigned char * buffer, int index);
-		int parseLightBumper(unsigned char * buffer, int index);
-		int parseLightBumperLeftSignal(unsigned char * buffer, int index);
-		int parseLightBumperFrontLeftSignal(unsigned char * buffer, int index);
-		int parseLightBumperCenterLeftSignal(unsigned char * buffer, int index);
-		int parseLightBumperCenterRightSignal(unsigned char * buffer, int index);
-		int parseLightBumperFrontRightSignal(unsigned char * buffer, int index);
-		int parseLightBumperRightSignal(unsigned char * buffer, int index);
-		int parseIrCharLeft(unsigned char * buffer, int index);
-		int parseIrCharRight(unsigned char * buffer, int index);
-		int parseLeftMotorCurrent(unsigned char * buffer, int index);
-		int parseRightMotorCurrent(unsigned char * buffer, int index);
-		int parseMainBrushMotorCurrent(unsigned char * buffer, int index);
-		int parseSideBrushMotorCurrent(unsigned char * buffer, int index);
-		int parseStasis(unsigned char * buffer, int index);
-	
-		//! Buffer to signed int
-		/*!
-		*  Parsing helper function. Converts 2 bytes of data into a signed int value. 
-		*
-		*  \param buffer  	Data buffer.
-		*  \param index  	Position in the buffer where the value is.
-		*
-		*  \sa buffer2unsigned_int()
-		*
-		*  \return A signed int value.
-		*/
-		int buffer2signed_int(unsigned char * buffer, int index);
-		//! Buffer to unsigned int
-		/*!
-		*  Parsing helper function. Converts 2 bytes of data into an unsigned int value. 
-		*
-		*  \param buffer  	Data buffer.
-		*  \param index  	Position in the buffer where the value is.
-		*
-		*  \sa buffer2signed_int()
-		*
-		*  \return An unsigned int value.
-		*/
-		int buffer2unsigned_int(unsigned char * buffer, int index);
 	
 		//! Start OI
 		/*!
@@ -626,42 +482,75 @@ namespace irobot
 		*
 		*  \param full_control    Whether to set the Roomba on OImode full or not.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int startOI(bool full_control);
+        bool startOI(bool full_control);
 		//! Send OP code
 		/*!
 		*  Send an OP code to Roomba.
 		*
 		*  \param code  			OP code to send.
 		*
-		*  \return 0 if ok, -1 otherwise.
+        *  \return true if successful, false otherwise
 		*/
-		int sendOpcode(OI_Opcode code);
-	
-		//! Serial port to which the robot is connected
-		std::string port_name_;
+        bool sendOpcode(OIOpcode code);
+
+        //! Parse sensor packets
+        /*!
+        *  Parses the sensor packets coming from the Roomba.
+        *
+        *  \param buffer        The buffer containning the data to be parsed
+        *
+        *  \return true if successful, false otherwise
+        */
+        bool parseSensorPackets(unsigned char * buffer);
+
+        //! Parser helper to set the flags if a sensor state changes.
+        template <typename T>
+        inline bool checkAndSet(T &value, T new_value)
+        {
+            bool result = (value == new_value);
+            value = new_value;
+            return result;
+        }
+
+        //! Parser helper function for converting bytes to singed ints.
+        inline int buffer2signed_int(unsigned char * buffer, int index)
+        {
+            int16_t signed_int;
+
+            memcpy(&signed_int, buffer+index, 2);
+            signed_int = ntohs(signed_int);
+
+            return (int)signed_int;
+        }
+        //! Parser helper function for converting bytes to unsinged ints.
+        inline int buffer2unsigned_int(unsigned char * buffer, int index)
+        {
+            uint16_t unsigned_int;
+
+            memcpy(&unsigned_int, buffer+index, 2);
+            unsigned_int = ntohs(unsigned_int);
+
+            return (int)unsigned_int;
+        }
+
 		//! Cereal port object
 		cereal::CerealPort * serial_port_;
-	
-		//! Stream variable. NOT TESTED
-		bool stream_defined_;
 		
-		//! Number of packets
-		int num_of_packets_;
-		//! Array of packets
-		OI_Packet_ID * sensor_packets_;
-		//! Total size of packets
-		size_t packets_size_;
-	
-		//! Amount of distance travelled since last reading. Not being used, poor resolution. 
-		int distance_;
-		//! Amount of angle turned since last reading. Not being used, poor resolution. 
-		int angle_;
-		//! Delta encoder counts.
-		int encoder_counts_[2];
-		//! Last encoder counts reading. For odometry calculation.
-		uint16_t last_encoder_counts_[2];
+        //! Set for requesting packets.
+        std::set<OIPacketID> request_packets_;
+        //! Set for parsing the replied packets. The difference is that the request set admits groups, the reply set does not.
+        std::set<OIPacketID> reply_packets_;
+        //! The buffer size in the reply.
+        unsigned int reply_packets_size_;
+        //! Map containning the size in bytes of each packet ID.
+        std::map<OIPacketID, unsigned int> packet_size_;
+
+        //! Encoder counts.
+        unsigned int encoder_counts_[2];
+        //! Last encoder counts reading.
+        unsigned int last_encoder_counts_[2];
 	};
 
 }
