@@ -138,7 +138,7 @@
 //! Roomba encoder pulses to meter constant
 #define ROOMBA_PULSES_TO_M                          0.000445558279992234
 
-#define ROOMBA_ENCODER_OVERFLOW                     (65535/2)
+#define ROOMBA_ENCODER_OVERFLOW                     65535
 
 namespace iRobot
 {

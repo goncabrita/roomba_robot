@@ -725,10 +725,10 @@ void iRobot::OpenInterface::calculateOdometry()
     if(last_encoder_counts_[ROOMBA_LEFT_ENCODER] > -1 && last_encoder_counts_[ROOMBA_RIGHT_ENCODER] > -1)
     {
         int left_pulses = encoder_counts_[ROOMBA_LEFT_ENCODER] - last_encoder_counts_[ROOMBA_LEFT_ENCODER];
-        if(abs(left_pulses) > ROOMBA_ENCODER_OVERFLOW) left_pulses += left_pulses < 0 ? ROOMBA_ENCODER_OVERFLOW : -ROOMBA_ENCODER_OVERFLOW;
+        if(abs(left_pulses) > ROOMBA_ENCODER_OVERFLOW/2) left_pulses += left_pulses < 0 ? ROOMBA_ENCODER_OVERFLOW : -ROOMBA_ENCODER_OVERFLOW;
 
         int right_pulses = encoder_counts_[ROOMBA_RIGHT_ENCODER] - last_encoder_counts_[ROOMBA_RIGHT_ENCODER];
-        if(abs(right_pulses) > ROOMBA_ENCODER_OVERFLOW) right_pulses += right_pulses < 0 ? ROOMBA_ENCODER_OVERFLOW : -ROOMBA_ENCODER_OVERFLOW;
+        if(abs(right_pulses) > ROOMBA_ENCODER_OVERFLOW/2) right_pulses += right_pulses < 0 ? ROOMBA_ENCODER_OVERFLOW : -ROOMBA_ENCODER_OVERFLOW;
 
         double distance = (right_pulses*ROOMBA_PULSES_TO_M + left_pulses*ROOMBA_PULSES_TO_M) / 2.0;
         double angle = (right_pulses*ROOMBA_PULSES_TO_M - left_pulses*ROOMBA_PULSES_TO_M) / -ROOMBA_AXLE_LENGTH;
