@@ -80,7 +80,7 @@ RoombaTeleop::RoombaTeleop():
 {
   ph_.param("axis_linear", linear_, linear_);
   ph_.param("axis_angular", angular_, angular_);
-  ph_.param("dead:man_switch", dead_man_switch_, dead_man_switch_);
+  ph_.param("dead_man_switch", dead_man_switch_, dead_man_switch_);
   ph_.param("scale_angular", a_scale_, a_scale_);
   ph_.param("scale_linear", l_scale_, l_scale_);
 
