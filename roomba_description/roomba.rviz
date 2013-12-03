@@ -184,17 +184,45 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        base_footprint:
-          base_link:
-            {}
         odom:
-          {}
+          base_footprint:
+            base_link:
+              caster_wheel_link:
+                {}
+              center_left_ir_sensor_link:
+                {}
+              center_right_ir_sensor_link:
+                {}
+              front_left_cliff_sensor_link:
+                {}
+              front_left_ir_sensor_link:
+                {}
+              front_right_cliff_sensor_link:
+                {}
+              front_right_ir_sensor_link:
+                {}
+              left_bumper_link:
+                {}
+              left_cliff_sensor_link:
+                {}
+              left_ir_sensor_link:
+                {}
+              left_wheel_link:
+                {}
+              right_bumper_link:
+                {}
+              right_cliff_sensor_link:
+                {}
+              right_ir_sensor_link:
+                {}
+              right_wheel_link:
+                {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -215,17 +243,17 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.627332
+      Distance: 0.881356
       Focal Point:
         X: 0
         Y: 0
         Z: 0
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.619797
+      Pitch: 0.434797
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.541768
+      Yaw: 0.446768
     Saved: ~
 Window Geometry:
   Displays:

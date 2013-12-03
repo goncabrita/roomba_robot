@@ -122,7 +122,7 @@ Roomba::Roomba() : oi_(), n_(), pn_("~")
     wheel_pub_ = NULL;
     range_pub_ = NULL;
 
-    pn_.param<std::string>("base_frame_id", base_frame_id_, "base_link");
+    pn_.param<std::string>("base_frame_id", base_frame_id_, "base_footprint");
     pn_.param<std::string>("odom_frame_id", odom_frame_id_, "odom");
 
     pn_.param("ir_sensor_max_range", ir_sensor_max_range_, 0.25);

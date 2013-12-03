@@ -138,6 +138,8 @@
 //! Roomba encoder pulses to meter constant
 #define ROOMBA_PULSES_TO_M                          0.000445558279992234
 
+#define ROOMBA_ENCODER_OVERFLOW                     (65535/2)
+
 namespace iRobot
 {
 	//! OI op codes
@@ -533,9 +535,9 @@ namespace iRobot
         std::map<OIPacketID, unsigned int> packet_size_;
 
         //! Encoder counts.
-        unsigned int encoder_counts_[2];
+        int encoder_counts_[2];
         //! Last encoder counts reading.
-        unsigned int last_encoder_counts_[2];
+        int last_encoder_counts_[2];
 
         unsigned char clean_color_;
         unsigned char clean_brightness_;

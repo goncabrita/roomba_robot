@@ -102,6 +102,13 @@ iRobot::OpenInterface::OpenInterface()
     clean_color_ = 0;
     clean_brightness_ = 0;
 
+    odometry_yaw_ = 0.0;
+    odometry_x_ = 0.0;
+    odometry_y_ = 0.0;
+
+    last_encoder_counts_[ROOMBA_LEFT_ENCODER] = -1;
+    last_encoder_counts_[ROOMBA_LEFT_ENCODER] = -1;
+
     unsigned int i;
     for(i=0 ; i<17 ; i++) leds_[i] = false;
     for(i=0 ; i<2 ; i++) brush_direction_[i] = false;
@@ -656,7 +663,7 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
 
             case OI_PACKET_RIGHT_ENCODER:
             case OI_PACKET_LEFT_ENCODER:
-                last_encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER] = encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER];
+                //last_encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER] = encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER];
                 encoder_counts_[*packet_it-OI_PACKET_RIGHT_ENCODER] = buffer2unsigned_int(buffer, index);
                 index+=2;
                 break;
@@ -715,17 +722,22 @@ bool iRobot::OpenInterface::parseSensorPackets(unsigned char * buffer)
 // Calculate Roomba odometry
 void iRobot::OpenInterface::calculateOdometry()
 {	
-    int left_pulses = encoder_counts_[ROOMBA_LEFT_ENCODER] - last_encoder_counts_[ROOMBA_LEFT_ENCODER];
-    int right_pulses = encoder_counts_[ROOMBA_RIGHT_ENCODER] - last_encoder_counts_[ROOMBA_RIGHT_ENCODER];
+    if(last_encoder_counts_[ROOMBA_LEFT_ENCODER] > -1 && last_encoder_counts_[ROOMBA_RIGHT_ENCODER] > -1)
+    {
+        int left_pulses = encoder_counts_[ROOMBA_LEFT_ENCODER] - last_encoder_counts_[ROOMBA_LEFT_ENCODER];
+        if(abs(left_pulses) > ROOMBA_ENCODER_OVERFLOW) left_pulses += left_pulses < 0 ? ROOMBA_ENCODER_OVERFLOW : -ROOMBA_ENCODER_OVERFLOW;
 
-    double distance = (right_pulses*ROOMBA_PULSES_TO_M + left_pulses*ROOMBA_PULSES_TO_M) / 2.0;
-    double angle = (right_pulses*ROOMBA_PULSES_TO_M - left_pulses*ROOMBA_PULSES_TO_M) / -ROOMBA_AXLE_LENGTH;
+        int right_pulses = encoder_counts_[ROOMBA_RIGHT_ENCODER] - last_encoder_counts_[ROOMBA_RIGHT_ENCODER];
+        if(abs(right_pulses) > ROOMBA_ENCODER_OVERFLOW) right_pulses += right_pulses < 0 ? ROOMBA_ENCODER_OVERFLOW : -ROOMBA_ENCODER_OVERFLOW;
 
-	// Update odometry
-    odometry_yaw_ = angles::normalize_angle(odometry_yaw_ + angle);
-    odometry_x_ = odometry_x_ + distance*cos(odometry_yaw_);
-    odometry_y_ = odometry_y_ + distance*sin(odometry_yaw_);
+        double distance = (right_pulses*ROOMBA_PULSES_TO_M + left_pulses*ROOMBA_PULSES_TO_M) / 2.0;
+        double angle = (right_pulses*ROOMBA_PULSES_TO_M - left_pulses*ROOMBA_PULSES_TO_M) / -ROOMBA_AXLE_LENGTH;
 
+        // Update odometry
+        odometry_yaw_ = angles::normalize_angle(odometry_yaw_ + angle);
+        odometry_x_ = odometry_x_ + distance*cos(odometry_yaw_);
+        odometry_y_ = odometry_y_ + distance*sin(odometry_yaw_);
+    }
     last_encoder_counts_[ROOMBA_LEFT_ENCODER] = encoder_counts_[ROOMBA_LEFT_ENCODER];
     last_encoder_counts_[ROOMBA_RIGHT_ENCODER] = encoder_counts_[ROOMBA_RIGHT_ENCODER];
 }

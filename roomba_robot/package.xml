@@ -2,7 +2,7 @@
 <package>
   <name>roomba_robot</name>
   <version>0.0.0</version>
-  <description>The roomba_robot package</description>
+  <description>The roomba_robot metapackage</description>
 
   <maintainer email="goncabrita@gmail.com">Gonçalo Cabrita</maintainer>
 
@@ -17,6 +17,7 @@
   <run_depend>roomba_description</run_depend>
   <run_depend>roomba_driver</run_depend>
   <run_depend>roomba_msgs</run_depend>
+  <run_depend>roomba_stage</run_depend>
   <run_depend>roomba_teleop</run_depend>
 
   <export>
