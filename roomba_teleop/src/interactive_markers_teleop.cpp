@@ -49,7 +49,7 @@ class RoombaMarkerServer
 {
   public:
     RoombaMarkerServer()
-      : nh("~"), server("roomba_marker_server")
+      : pnh("~"), server("roomba_marker_server")
     {
 
       pnh.param<std::string>("link_name", link_name, "/base_link");
