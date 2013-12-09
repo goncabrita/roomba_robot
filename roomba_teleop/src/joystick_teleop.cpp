@@ -126,7 +126,13 @@ void RoombaTeleop::publish()
 {
   boost::mutex::scoped_lock lock(publish_mutex_);
 
-  if(dead_man_switch_pressed_)
+  if(!dead_man_switch_pressed_ && (last_published_.angular.z != 0.0 || last_published_.linear.x != 0.0))
+  {
+      last_published_.angular.z = 0.0;
+      last_published_.linear.x = 0.0;
+      vel_pub_.publish(last_published_);
+  }
+  else if(dead_man_switch_pressed_)
   {
     vel_pub_.publish(last_published_);
   }
