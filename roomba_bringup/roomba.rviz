@@ -5,6 +5,9 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /RobotModel1
+        - /RobotModel1/Status1
+        - /TF1
         - /TF1/Frames1
       Splitter Ratio: 0.5
     Tree Height: 848
@@ -184,11 +187,39 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        base_footprint:
-          base_link:
-            {}
         odom:
-          {}
+          base_footprint:
+            base_link:
+              caster_wheel_link:
+                {}
+              center_left_ir_sensor_link:
+                {}
+              center_right_ir_sensor_link:
+                {}
+              front_left_cliff_sensor_link:
+                {}
+              front_left_ir_sensor_link:
+                {}
+              front_right_cliff_sensor_link:
+                {}
+              front_right_ir_sensor_link:
+                {}
+              left_bumper_link:
+                {}
+              left_cliff_sensor_link:
+                {}
+              left_ir_sensor_link:
+                {}
+              left_wheel_link:
+                {}
+              right_bumper_link:
+                {}
+              right_cliff_sensor_link:
+                {}
+              right_ir_sensor_link:
+                {}
+              right_wheel_link:
+                {}
       Update Interval: 0
       Value: true
     - Alpha: 0.2
@@ -202,7 +233,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: base_link
+    Fixed Frame: odom
     Frame Rate: 30
   Name: root
   Tools:
@@ -223,17 +254,17 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.12477
+      Distance: 3.25942
       Focal Point:
         X: 0
         Y: 0
         Z: 0
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.659797
+      Pitch: 0.564797
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.534951
+      Yaw: 6.04314
     Saved: ~
 Window Geometry:
   Displays:

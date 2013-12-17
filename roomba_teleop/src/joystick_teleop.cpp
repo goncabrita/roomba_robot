@@ -80,7 +80,7 @@ RoombaTeleop::RoombaTeleop():
 {
   ph_.param("axis_linear", linear_, linear_);
   ph_.param("axis_angular", angular_, angular_);
-  ph_.param("dead:man_switch", dead_man_switch_, dead_man_switch_);
+  ph_.param("dead_man_switch", dead_man_switch_, dead_man_switch_);
   ph_.param("scale_angular", a_scale_, a_scale_);
   ph_.param("scale_linear", l_scale_, l_scale_);
 
@@ -126,7 +126,13 @@ void RoombaTeleop::publish()
 {
   boost::mutex::scoped_lock lock(publish_mutex_);
 
-  if(dead_man_switch_pressed_)
+  if(!dead_man_switch_pressed_ && (last_published_.angular.z != 0.0 || last_published_.linear.x != 0.0))
+  {
+      last_published_.angular.z = 0.0;
+      last_published_.linear.x = 0.0;
+      vel_pub_.publish(last_published_);
+  }
+  else if(dead_man_switch_pressed_)
   {
     vel_pub_.publish(last_published_);
   }

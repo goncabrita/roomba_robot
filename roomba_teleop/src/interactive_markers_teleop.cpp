@@ -49,13 +49,12 @@ class RoombaMarkerServer
 {
   public:
     RoombaMarkerServer()
-      : nh("~"), server("roomba_marker_server")
+      : pnh("~"), server("roomba_marker_server")
     {
-      std::string cmd_vel_topic;
 
-      nh.param<std::string>("link_name", link_name, "/base_link");
-      nh.param<double>("linear_scale", linear_scale, 1.0);
-      nh.param<double>("angular_scale", angular_scale, 2.2);
+      pnh.param<std::string>("link_name", link_name, "/base_link");
+      pnh.param<double>("linear_scale", linear_scale, 1.0);
+      pnh.param<double>("angular_scale", angular_scale, 2.2);
 
       vel_pub = nh.advertise<geometry_msgs::Twist>("teleop/cmd_vel", 1);
       createInteractiveMarkers();
@@ -70,6 +69,7 @@ class RoombaMarkerServer
     void createInteractiveMarkers();
   
     ros::NodeHandle nh;
+    ros::NodeHandle pnh;
     ros::Publisher vel_pub;
     interactive_markers::InteractiveMarkerServer server;
     
