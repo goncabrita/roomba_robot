@@ -34,7 +34,7 @@
 	    	<visual>
 	      		<origin xyz=" 0 0 0.0308" rpy="0 0 1.5708" />
 	      		<geometry>
-	        		<mesh filename="package://roomba_description/meshes/black_roomba.dae"/>
+	        		<mesh filename="package://roomba_description/meshes/$(arg color)_roomba.dae"/>
 	      		</geometry>
 	    	</visual>
 	
