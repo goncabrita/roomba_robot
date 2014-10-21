@@ -15,7 +15,7 @@
 		<param name="use_seven_segment_display" value="true" />
 	</node>
 
- 	 <param name="robot_description" command="$(find xacro)/xacro.py '$(find roomba_description)/urdf/black_roomba.urdf.xacro'" />
+ 	 <param name="robot_description" command="$(find xacro)/xacro.py '$(find roomba_description)/urdf/roomba.urdf.xacro' color:=black" />
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
 	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
 

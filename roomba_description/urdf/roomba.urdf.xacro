@@ -7,19 +7,11 @@
 	
 	<!-- base_footprint is a fictitious link(frame) that is on the ground right below base_link origin, navigation stack depends on this frame -->
 	<link name="base_footprint">
-		<visual>
-	  		<origin xyz="0 0 0" rpy="0 0 0" />
-	      		<geometry>
-	        		<box size="0.001 0.001 0.001" />
-	      		</geometry>
-			<material name="Green" />
-	 	</visual>
-	
 	 	<collision>
-	      		<origin xyz="0 0 0.017" rpy="0 0 0" />
+	      		<origin xyz="0 0 0" rpy="0 0 0" />
 	      		<geometry>
-	       			<box size="0.001 0.001 0.001" />
-	      		</geometry>
+	        		<cylinder length="0" radius="0.16495"/>
+	     	 	</geometry>
 	    	</collision>
 	</link>
 	
@@ -34,14 +26,14 @@
 	    	<visual>
 	      		<origin xyz=" 0 0 0.0308" rpy="0 0 1.5708" />
 	      		<geometry>
-	        		<mesh filename="package://roomba_description/meshes/black_roomba.dae"/>
+	        		<mesh filename="package://roomba_description/meshes/$(arg color)_roomba.dae"/>
 	      		</geometry>
 	    	</visual>
 	
 	    	<collision>
-	      		<origin xyz="0.0 0.0 0.0308" rpy="0 0 0" />
+	      		<origin xyz="0.0 0.0 0.0358" rpy="0 0 0" />
 	      		<geometry>
-	        		<cylinder length="0.0611632" radius="0.016495"/>
+	        		<cylinder length="0.0711632" radius="0.16495"/>
 	     	 	</geometry>
 	    	</collision>
 	</link>
